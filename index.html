@@ -1092,10 +1092,15 @@ function setImportMode(mode) {
 }
 
 function normHeader(h){
-  return String(h||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
+  var s = String(h||'').trim().toLowerCase();
+  // Remove accents
+  s = s.normalize('NFD').replace(/[̀-ͯ]/g,'');
+  // Normalize spaces
+  s = s.replace(/\s+/g,' ').trim();
+  return s;
 }
 
-var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','referencia':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
+var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','referncia sigpac':'refSIGPAC','ref sigpac':'refSIGPAC','referencia':'refSIGPAC','referncia':'refSIGPAC','ref. sigpac':'refSIGPAC','refsigpac':'refSIGPAC','rereferncia sigpac':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
 var CUSTOM_MAP={'nombre':'nombre','referencia catastral':'refCatastral','ref catastral':'refCatastral','superficie':'superficie','superficie (ha)':'superficie','ha':'superficie','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas'};
 
 function parseSurface(v){if(v===undefined||v===null||v==='')return 0;return parseFloat(String(v).replace(',','.'))||0;}
@@ -1218,8 +1223,14 @@ function exportarExcelCampana(campana) {
     for(var j=0;j<declaraciones.length;j++){
       if(declaraciones[j].parcelaId===p.id && declaraciones[j].campana===campana) lineas.push(declaraciones[j]);
     }
+    // Build refSIGPAC from parts if not stored directly
+    var refSIGPAC = p.refSIGPAC || '';
+    if(!refSIGPAC && p.poligono && p.parcela) {
+      // Try to reconstruct from known data - but we may not have cp/cm
+      // Just leave empty if not available
+    }
     var base = {
-      'Referencia SIGPAC': p.refSIGPAC||'',
+      'Referencia SIGPAC': refSIGPAC,
       'Poligono': p.poligono||'',
       'Parcela': p.parcela||'',
       'Recinto': p.recinto||'',
