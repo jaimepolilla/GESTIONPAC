@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3d6b2f">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>PAC Gestion</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -146,6 +149,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 .nav-item span{display:block;font-size:22px;margin-bottom:2px;}
 .campana-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .campana-bar select{flex:1;padding:10px 12px;font-size:14px;}
+.campana-btn{
+  padding:10px 20px;border-radius:20px;border:2px solid var(--borde);
+  background:var(--blanco);color:var(--gris);font-size:15px;font-weight:700;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  transition:all 0.2s;
+}
+.campana-btn-activa{
+  background:var(--verde);color:white;border-color:var(--verde);
+  box-shadow:0 2px 8px rgba(61,107,47,0.35);
+}
 .btn-nueva-campana{background:var(--verde);color:white;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .btn-bienvenida{width:100%;max-width:380px;display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:10px;background:var(--blanco);border:1.5px solid var(--borde);border-radius:var(--radio);cursor:pointer;text-align:left;box-shadow:var(--sombra);}
 .btn-bienvenida:active{background:var(--verde-fondo);}
@@ -225,10 +238,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 
 <!-- PAC -->
 <div id="page-pac" class="page">
-  <div class="campana-bar">
-    <select id="selectCampana"></select>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:600;color:#888">Campaña activa</div>
     <button class="btn-nueva-campana" id="btnNuevaCampana">+ Campaña</button>
   </div>
+  <div id="campanasBtns" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-num" id="statParcelas">-</div><div class="stat-label">Parcelas</div></div>
     <div class="stat-card tierra"><div class="stat-num" id="statHa">-</div><div class="stat-label">Ha totales</div></div>
@@ -244,8 +258,15 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="search-bar"><span>&#128269;</span><input type="text" id="searchParcela" placeholder="Buscar..." oninput="renderParcelas()"></div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="setFiltro('todos')">Todas</div>
-    <div class="filter-chip" onclick="setFiltro('R')">Regadio</div>
+    <div class="filter-chip" onclick="setFiltro('R')">Regad&#237;o</div>
     <div class="filter-chip" onclick="setFiltro('S')">Secano</div>
+    <div class="filter-chip" id="chipSeleccionar" onclick="toggleModoSeleccion()">&#9745; Seleccionar</div>
+  </div>
+  <!-- Barra de selección múltiple -->
+  <div id="barraSeleccion" style="display:none;background:var(--blanco);border-radius:var(--radio);box-shadow:var(--sombra);padding:12px 16px;margin-bottom:12px;display:none;align-items:center;gap:10px;">
+    <input type="checkbox" id="chkTodos" style="width:18px;height:18px;cursor:pointer;accent-color:var(--verde)">
+    <label for="chkTodos" style="font-size:14px;font-weight:600;cursor:pointer;flex:1">Seleccionar todas (<span id="numSeleccionadas">0</span>)</label>
+    <button id="btnEliminarSeleccion" style="background:var(--rojo);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;display:none">&#128465; Eliminar seleccionadas</button>
   </div>
   <div id="listaParcelas"></div>
 </div>
@@ -375,7 +396,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <!-- MODAL CULTIVO -->
 <div class="modal-overlay" id="modalCultivo">
   <div class="modal">
-    <div class="modal-title"><span id="modalCultivoTitle">Declarar cultivo</span><button class="modal-close" onclick="cerrarModal('modalCultivo')">X</button></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <button id="btnVolverPAC" style="background:var(--verde-fondo);border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--verde);cursor:pointer;touch-action:manipulation;">&#8592; PAC</button>
+      <div style="flex:1;font-size:19px;font-weight:800;color:var(--verde)" id="modalCultivoTitle">Declarar cultivo</div>
+      <button class="modal-close" onclick="cerrarModal('modalCultivo')">X</button>
+    </div>
     <input type="hidden" id="cultivoParcelaId">
     <input type="hidden" id="cultivoLineaId">
     <div id="cultivoParcelaInfo" style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:4px">
@@ -645,35 +670,34 @@ function showPage(name) {
 }
 
 function renderCampanas() {
-  var sel = document.getElementById('selectCampana');
+  var cont = document.getElementById('campanasBtns');
+  if(!cont) return;
   if(!campanas.length) {
-    sel.innerHTML = '<option value="">Sin campaña</option>';
+    cont.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin campañas. Pulsa + para crear una.</div>';
     document.getElementById('headerCampana').textContent = '';
-  } else {
-    var html = '';
-    for(var i=0;i<campanas.length;i++) {
-      html += '<option value="' + campanas[i] + '"' + (campanas[i]===campanaActual?' selected':'') + '>' + campanas[i] + '</option>';
-    }
-    sel.innerHTML = html;
-    // Make sure campanaActual is set to the selected value
-    if(!campanaActual && campanas.length) campanaActual = campanas[0];
-    sel.value = campanaActual;
-    document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
+    var btn = document.getElementById('btnNuevaCampana');
+    if(btn) btn.onclick = function(){ nuevaCampana(); };
+    return;
   }
-  // Attach change event
-  sel.onchange = function() { cambiarCampana(); };
-  // Attach nueva campaña button
-  var btn = document.getElementById('btnNuevaCampana');
-  if(btn) btn.onclick = function() { nuevaCampana(); };
-}
-
-
-function cambiarCampana() {
-  var sel = document.getElementById('selectCampana');
-  campanaActual = sel.value;
+  var html = '';
+  for(var i=0;i<campanas.length;i++){
+    var c = campanas[i];
+    var activa = c === campanaActual;
+    html += '<button class="campana-btn' + (activa?' campana-btn-activa':'') + '" data-campana="'+c+'">' + c + '</button>';
+  }
+  cont.innerHTML = html;
+  cont.querySelectorAll('.campana-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      campanaActual = this.getAttribute('data-campana');
+      document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
+      save();
+      renderCampanas();
+      renderPAC();
+    });
+  });
   document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
-  save();
-  renderPAC();
+  var btn = document.getElementById('btnNuevaCampana');
+  if(btn) btn.onclick = function(){ nuevaCampana(); };
 }
 
 
@@ -923,6 +947,82 @@ function eliminarLineaCultivo(lineaId) {
   save(); renderPAC(); toast('Linea eliminada');
 }
 
+var modoSeleccion = false;
+var parcelasSeleccionadas = {};
+
+function toggleModoSeleccion() {
+  modoSeleccion = !modoSeleccion;
+  parcelasSeleccionadas = {};
+  var chip = document.getElementById('chipSeleccionar');
+  var barra = document.getElementById('barraSeleccion');
+  if(modoSeleccion) {
+    chip.classList.add('active');
+    barra.style.display = 'flex';
+  } else {
+    chip.classList.remove('active');
+    barra.style.display = 'none';
+    document.getElementById('btnEliminarSeleccion').style.display = 'none';
+  }
+  renderParcelas();
+}
+
+function toggleSeleccionParcela(id, checked) {
+  if(checked) parcelasSeleccionadas[id] = true;
+  else delete parcelasSeleccionadas[id];
+  actualizarBarraSeleccion();
+}
+
+function actualizarBarraSeleccion() {
+  var n = Object.keys(parcelasSeleccionadas).length;
+  document.getElementById('numSeleccionadas').textContent = n;
+  var btnEl = document.getElementById('btnEliminarSeleccion');
+  btnEl.style.display = n > 0 ? 'block' : 'none';
+  // Update chkTodos state
+  var chk = document.getElementById('chkTodos');
+  var ps = parcelas.filter(function(p){
+    if(filtroActual!=='todos' && p.regadio!==filtroActual) return false;
+    return true;
+  });
+  chk.checked = ps.length > 0 && n === ps.length;
+  chk.indeterminate = n > 0 && n < ps.length;
+}
+
+function seleccionarTodas(checked) {
+  var ps = parcelas.filter(function(p){
+    if(filtroActual!=='todos' && p.regadio!==filtroActual) return false;
+    return true;
+  });
+  parcelasSeleccionadas = {};
+  if(checked) {
+    for(var i=0;i<ps.length;i++) parcelasSeleccionadas[ps[i].id] = true;
+  }
+  actualizarBarraSeleccion();
+  renderParcelas();
+}
+
+function eliminarSeleccionadas() {
+  var ids = Object.keys(parcelasSeleccionadas);
+  if(!ids.length) return;
+  if(!confirm('Eliminar ' + ids.length + ' parcelas seleccionadas y sus cultivos?')) return;
+  var np = [], nd = [];
+  for(var i=0;i<parcelas.length;i++){
+    if(!parcelasSeleccionadas[parcelas[i].id]) np.push(parcelas[i]);
+  }
+  for(var i=0;i<declaraciones.length;i++){
+    if(!parcelasSeleccionadas[declaraciones[i].parcelaId]) nd.push(declaraciones[i]);
+  }
+  parcelas = np; declaraciones = nd;
+  parcelasSeleccionadas = {};
+  save();
+  modoSeleccion = false;
+  var chip = document.getElementById('chipSeleccionar');
+  if(chip) chip.classList.remove('active');
+  var barra = document.getElementById('barraSeleccion');
+  if(barra) barra.style.display = 'none';
+  renderParcelas();
+  toast('Parcelas eliminadas');
+}
+
 function setFiltro(v) {
   filtroActual = v;
   var chips = document.querySelectorAll('.filter-chip');
@@ -949,33 +1049,48 @@ function renderParcelas() {
   var html='';
   for(var i=0;i<ps.length;i++) {
     var p=ps[i];
-    html += '<div class="card">' +
-      '<div class="card-header"><div style="flex:1;min-width:0">' +
+    var selChecked = parcelasSeleccionadas[p.id] ? 'checked' : '';
+    html += '<div class="card" style="' + (parcelasSeleccionadas[p.id]?'border:2px solid var(--verde);':'') + '">' +
+      '<div class="card-header"><div style="flex:1;min-width:0;display:flex;align-items:flex-start;gap:10px">' +
+      (modoSeleccion ? '<input type="checkbox" class="parc-chk" data-id="'+p.id+'" '+selChecked+' style="width:20px;height:20px;margin-top:2px;flex-shrink:0;accent-color:var(--verde);cursor:pointer">' : '') +
+      '<div style="flex:1;min-width:0">' +
       '<div class="card-title">'+p.nombre+'</div>' +
       (p.refSIGPAC?'<div class="sigpac-ref">'+p.refSIGPAC+'</div>':'') +
       ((p.poligono||p.parcela)?'<div class="poligono-info">Pol. '+(p.poligono||'-')+' Parc. '+(p.parcela||'-')+' Rec. '+(p.recinto||'-')+'</div>':'') +
-      '</div><div style="text-align:right;flex-shrink:0;margin-left:10px">' +
+      '</div></div>' +
+      '<div style="text-align:right;flex-shrink:0;margin-left:10px">' +
       '<div style="font-size:18px;font-weight:800;color:var(--tierra)">'+(p.superficie||'-')+' ha</div>' +
       '<div style="font-size:11px;color:#aaa">'+(p.municipio||'')+'</div></div></div>' +
       '<div class="card-badges">' +
       (p.regadio==='R'?'<span class="badge regadio">Regad&#237;o</span>':p.regadio==='S'?'<span class="badge secano">Secano</span>':'') +
-      '</div><div class="card-actions">' +
-      '<button class="btn-sm btn-edit parc-btn-editar" data-id="'+p.id+'">&#9998; Editar</button>' +
-      '<button class="btn-sm btn-del parc-btn-borrar" data-id="'+p.id+'">&#128465; Eliminar</button>' +
-      (p.refSIGPAC?'<button class="btn-sm parc-btn-sigpac" data-id="'+p.id+'" style="background:var(--azul-claro);color:var(--azul)">&#128506; SIGPAC</button>':'') +
-      '</div></div>';
+      '</div>' +
+      (!modoSeleccion ? '<div class="card-actions">' +
+        '<button class="btn-sm btn-edit parc-btn-editar" data-id="'+p.id+'">&#9998; Editar</button>' +
+        '<button class="btn-sm btn-del parc-btn-borrar" data-id="'+p.id+'">&#128465; Eliminar</button>' +
+        (p.refSIGPAC?'<button class="btn-sm parc-btn-sigpac" data-id="'+p.id+'" style="background:var(--azul-claro);color:var(--azul)">&#128506; SIGPAC</button>':'') +
+        '</div>' : '') +
+      '</div>';
   }
   cont.innerHTML = html;
 
-  cont.querySelectorAll('.parc-btn-editar').forEach(function(el){
-    el.addEventListener('click', function(){ editarParcela(this.getAttribute('data-id')); });
-  });
-  cont.querySelectorAll('.parc-btn-borrar').forEach(function(el){
-    el.addEventListener('click', function(){ eliminarParcela(this.getAttribute('data-id')); });
-  });
-  cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
-    el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
-  });
+  if(modoSeleccion) {
+    cont.querySelectorAll('.parc-chk').forEach(function(chk){
+      chk.addEventListener('change', function(){
+        toggleSeleccionParcela(this.getAttribute('data-id'), this.checked);
+      });
+    });
+    actualizarBarraSeleccion();
+  } else {
+    cont.querySelectorAll('.parc-btn-editar').forEach(function(el){
+      el.addEventListener('click', function(){ editarParcela(this.getAttribute('data-id')); });
+    });
+    cont.querySelectorAll('.parc-btn-borrar').forEach(function(el){
+      el.addEventListener('click', function(){ eliminarParcela(this.getAttribute('data-id')); });
+    });
+    cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
+      el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
+    });
+  }
 }
 
 
@@ -1315,6 +1430,11 @@ document.querySelectorAll('.modal-overlay').forEach(function(m){
 
 function bindModalEvents() {
   // Modal cultivo
+  var btnVolver = document.getElementById('btnVolverPAC');
+  if(btnVolver) btnVolver.addEventListener('click', function(){
+    cerrarModal('modalCultivo');
+    showPage('pac');
+  });
   var btnG = document.getElementById('btnGuardarCultivo');
   if(btnG) btnG.onclick = function(){ guardarLineaCultivo(); };
   var btnCC = document.getElementById('btnCancelarCultivo');
@@ -1342,6 +1462,12 @@ function bindModalEvents() {
   var btnCPer = document.getElementById('btnCancelarPerfil');
   if(btnCPer) btnCPer.onclick = function(){ cerrarModal('modalPerfil'); };
 
+  // Seleccion multiple parcelas
+  var chkTodos = document.getElementById('chkTodos');
+  if(chkTodos) chkTodos.addEventListener('change', function(){ seleccionarTodas(this.checked); });
+  var btnElim = document.getElementById('btnEliminarSeleccion');
+  if(btnElim) btnElim.addEventListener('click', function(){ eliminarSeleccionadas(); });
+
   // Exportar en importar tab
   var btnExpImp = document.getElementById('btnExportarImportar');
   if(btnExpImp) btnExpImp.addEventListener('click', function(){ exportarExcel(); });
@@ -1359,10 +1485,7 @@ function bindModalEvents() {
   if(btnCE) btnCE.onclick = function(){ cerrarModal('modalExportar'); };
 
   // Campana bar
-  var sel = document.getElementById('selectCampana');
-  if(sel) sel.onchange = function(){ cambiarCampana(); };
-  var btnNC = document.getElementById('btnNuevaCampana');
-  if(btnNC) btnNC.onclick = function(){ nuevaCampana(); };
+  // campana buttons attached in renderCampanas()
 }
 
 function toast(msg,isError){
