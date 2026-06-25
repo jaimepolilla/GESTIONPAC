@@ -266,6 +266,18 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 
 <!-- IMPORTAR -->
 <div id="page-importar" class="page">
+  <!-- EXPORTAR -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--verde)">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="font-size:22px">&#128229;</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--verde);margin-bottom:4px">Exportar a Excel</div>
+        <div style="font-size:13px;color:#666;margin-bottom:12px">Descarga los datos de una campaña en formato Excel</div>
+        <button id="btnExportarImportar" style="background:var(--verde);color:white;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;width:100%">&#128229; Exportar campaña a Excel</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--azul)">
     <div style="display:flex;gap:10px;align-items:flex-start">
       <div style="font-size:22px">&#128260;</div>
@@ -1318,6 +1330,10 @@ function bindModalEvents() {
   if(btnCS) btnCS.onclick = function(){ cerrarSesionConfirm(); };
   var btnCPer = document.getElementById('btnCancelarPerfil');
   if(btnCPer) btnCPer.onclick = function(){ cerrarModal('modalPerfil'); };
+
+  // Exportar en importar tab
+  var btnExpImp = document.getElementById('btnExportarImportar');
+  if(btnExpImp) btnExpImp.addEventListener('click', function(){ exportarExcel(); });
 
   // Header buttons
   var btnEx = document.getElementById('btnExcel');
