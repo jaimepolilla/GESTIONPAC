@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--verde:#3d6b2f;--verde-claro:#5a8f47;--verde-fondo:#edf3ea;--tierra:#8b5e3c;--tierra-claro:#f5ede4;--gris:#4a4a4a;--gris-claro:#f2f2f2;--blanco:#ffffff;--rojo:#c0392b;--azul:#2471a3;--azul-claro:#d6eaf8;--naranja:#e67e22;--naranja-claro:#fef0e7;--borde:#d0dcc9;--sombra:0 2px 8px rgba(0,0,0,0.10);--radio:12px;--font:"Segoe UI",system-ui,sans-serif;}
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;margin:0;padding:0;}button,select,input{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 body{font-family:var(--font);background:var(--verde-fondo);color:var(--gris);min-height:100vh;padding-bottom:80px;}
 .screen{display:none;position:fixed;inset:0;z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;background:var(--verde-fondo);overflow-y:auto;}
 .screen.active{display:flex;}
@@ -19,8 +19,8 @@ body{font-family:var(--font);background:var(--verde-fondo);color:var(--gris);min
 .pin-field{width:160px;height:58px;border:2px solid var(--borde);border-radius:12px;font-size:28px;text-align:center;letter-spacing:10px;font-weight:700;background:var(--blanco);color:var(--gris);outline:none;display:block;margin:10px auto;}
 .pin-field:focus{border-color:var(--verde);}
 .user-list{width:100%;max-width:380px;}
-.user-item{display:flex;align-items:center;gap:14px;background:var(--blanco);border-radius:var(--radio);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sombra);cursor:pointer;border:2px solid transparent;width:100%;text-align:left;font-family:var(--font);font-size:inherit;color:inherit;}
-.user-item:active{border-color:var(--verde);}.user-item *{pointer-events:none;}
+.user-item{display:flex;align-items:center;gap:14px;background:var(--blanco);border-radius:var(--radio);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sombra);cursor:pointer;border:2px solid transparent;width:100%;text-align:left;font-family:var(--font);font-size:inherit;color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.user-item:active{border-color:var(--verde);}
 .user-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;flex-shrink:0;}
 .user-name{font-size:16px;font-weight:700;}
 .user-meta{font-size:12px;color:#888;margin-top:2px;}
@@ -42,7 +42,7 @@ header small{font-size:11px;opacity:0.8;display:block;}
 .badge.regadio{background:var(--azul-claro);color:var(--azul);border-color:#aed6f1;}
 .badge.secano{background:#fef9e7;color:#b7950b;border-color:#f9e79f;}
 .card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--borde);}
-.btn-sm{flex:1;padding:8px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-sm{flex:1;padding:12px 8px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .btn-edit{background:var(--verde-fondo);color:var(--verde);}
 .btn-del{background:#fdecea;color:var(--rojo);}
 .sigpac-ref{font-family:monospace;font-size:11px;color:#888;background:var(--gris-claro);padding:2px 7px;border-radius:5px;margin-top:4px;display:inline-block;}
@@ -80,7 +80,7 @@ header small{font-size:11px;opacity:0.8;display:block;}
 .pac-cultivo-semilla{font-size:12px;color:#888;}
 .pac-cultivo-ha{font-size:14px;font-weight:700;color:var(--tierra);white-space:nowrap;}
 .pac-cultivo-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;}
-.pac-add-btn{margin:6px 16px 14px;width:calc(100% - 32px);padding:10px;background:var(--verde-fondo);color:var(--verde);border:1.5px dashed var(--borde);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;}
+.pac-add-btn{margin:6px 16px 14px;width:calc(100% - 32px);padding:14px 10px;background:var(--verde-fondo);color:var(--verde);border:1.5px dashed var(--borde);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .pac-sin-cultivo{padding:10px 16px 14px;font-size:13px;color:#aaa;font-style:italic;border-top:1px solid var(--borde);}
 .semilla-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde);}
 .semilla-item:last-child{border-bottom:none;}
@@ -109,10 +109,10 @@ input[readonly]{background:var(--gris-claro);color:#888;cursor:default;}
 .disponible-val{font-size:20px;font-weight:800;color:var(--verde);}
 .disponible-box.warn .disponible-val{color:var(--naranja);}
 .disponible-box.error .disponible-val{color:var(--rojo);}
-.btn-primary{width:100%;padding:15px;background:var(--verde);color:white;border:none;border-radius:var(--radio);font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
+.btn-primary{width:100%;padding:15px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;background:var(--verde);color:white;border:none;border-radius:var(--radio);font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
 .btn-primary:active{background:var(--verde-claro);}
 .btn-primary:disabled{background:#ccc;cursor:not-allowed;}
-.btn-secondary{width:100%;padding:13px;background:var(--gris-claro);color:var(--gris);border:none;border-radius:var(--radio);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
+.btn-secondary{width:100%;padding:13px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;background:var(--gris-claro);color:var(--gris);border:none;border-radius:var(--radio);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
 .btn-danger{width:100%;padding:13px;background:#fdecea;color:var(--rojo);border:none;border-radius:var(--radio);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
 .upload-area{border:2px dashed var(--borde);border-radius:var(--radio);padding:32px 20px;text-align:center;cursor:pointer;background:var(--verde-fondo);}
 .upload-area:active{border-color:var(--verde);}
@@ -146,7 +146,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 .nav-item span{display:block;font-size:22px;margin-bottom:2px;}
 .campana-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .campana-bar select{flex:1;padding:10px 12px;font-size:14px;}
-.btn-nueva-campana{background:var(--verde);color:white;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-nueva-campana{background:var(--verde);color:white;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .btn-bienvenida{width:100%;max-width:380px;display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:10px;background:var(--blanco);border:1.5px solid var(--borde);border-radius:var(--radio);cursor:pointer;text-align:left;box-shadow:var(--sombra);}
 .btn-bienvenida:active{background:var(--verde-fondo);}
 .btn-bienvenida-icon{font-size:28px;flex-shrink:0;}
@@ -414,6 +414,20 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 </div>
 
 <button class="fab hidden" id="fabBtn" onclick="abrirModalNuevaParcela()">+</button>
+<!-- MODAL EXPORTAR -->
+<div class="modal-overlay" id="modalExportar">
+  <div class="modal" style="max-height:60vh">
+    <div class="modal-title">
+      <span>Exportar campaña</span>
+      <button class="modal-close" id="btnCerrarExportar">X</button>
+    </div>
+    <div style="font-size:13px;color:#888;margin-bottom:14px">
+      Selecciona la campaña que quieres exportar a Excel
+    </div>
+    <div id="exportCampanaList"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <nav id="appNav" style="display:none">
@@ -1157,6 +1171,38 @@ function cancelarImportacion(mode) {
 
 function exportarExcel() {
   if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
+  if(!campanas.length){toast('No hay campañas creadas',true);return;}
+  // Show campaign selector modal
+  var list = document.getElementById('exportCampanaList');
+  var html = '';
+  for(var i=0;i<campanas.length;i++){
+    var c = campanas[i];
+    // Count declaraciones for this campaign
+    var nDecl = 0;
+    var haDecl = 0;
+    for(var j=0;j<declaraciones.length;j++){
+      if(declaraciones[j].campana===c){
+        nDecl++;
+        haDecl += parseFloat(declaraciones[j].superficie)||0;
+      }
+    }
+    html += '<button class="export-campana-btn" data-campana="'+c+'" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--verde-fondo);border:1.5px solid var(--borde);border-radius:10px;padding:14px 16px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;">' +
+      '<div style="text-align:left"><div style="font-size:17px;font-weight:800;color:var(--verde)">Campaña '+c+'</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:3px">'+nDecl+' cultivos · '+haDecl.toFixed(2)+' ha declaradas</div></div>' +
+      '<div style="font-size:22px;color:var(--verde)">&#128229;</div>' +
+      '</button>';
+  }
+  list.innerHTML = html;
+  list.querySelectorAll('.export-campana-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var campana = this.getAttribute('data-campana');
+      cerrarModal('modalExportar');
+      exportarExcelCampana(campana);
+    });
+  });
+  document.getElementById('modalExportar').classList.add('open');
+  return; // stop here, actual export called from modal
+  if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
   var datos=[];
   for(var i=0;i<parcelas.length;i++){
     var p=parcelas[i];
@@ -1170,6 +1216,54 @@ function exportarExcel() {
   XLSX.utils.book_append_sheet(wb,ws,'PAC '+campanaActual);
   XLSX.writeFile(wb,'PAC_'+usuarioActual.nombre+'_'+campanaActual+'.xlsx');
   toast('Excel exportado');
+}
+
+function exportarExcelCampana(campana) {
+  var datos = [];
+  for(var i=0;i<parcelas.length;i++){
+    var p = parcelas[i];
+    var lineas = [];
+    for(var j=0;j<declaraciones.length;j++){
+      if(declaraciones[j].parcelaId===p.id && declaraciones[j].campana===campana) lineas.push(declaraciones[j]);
+    }
+    var base = {
+      'Referencia SIGPAC': p.refSIGPAC||'',
+      'Poligono': p.poligono||'',
+      'Parcela': p.parcela||'',
+      'Recinto': p.recinto||'',
+      'Sup. Total (ha)': p.superficie||'',
+      'Regadio/Secano': p.regadio||'',
+      'Nombre Parcela': p.nombre||'',
+      'Municipio': p.municipio||'',
+      'Provincia': p.provincia||'',
+      'Campana': campana
+    };
+    if(lineas.length){
+      for(var j=0;j<lineas.length;j++){
+        var d=lineas[j];
+        var row={};
+        for(var k in base) row[k]=base[k];
+        row['Cultivo']=d.cultivo||'';
+        row['Semilla']=d.semilla||'';
+        row['Sup. Declarada (ha)']=d.superficie||'';
+        row['Fecha Siembra']=d.fechaSiembra||'';
+        row['Notas']=d.notas||'';
+        datos.push(row);
+      }
+    } else {
+      var row={};
+      for(var k in base) row[k]=base[k];
+      row['Cultivo']=''; row['Semilla']=''; row['Sup. Declarada (ha)']=''; row['Fecha Siembra']=''; row['Notas']='';
+      datos.push(row);
+    }
+  }
+  if(!datos.length){toast('Sin datos para exportar',true);return;}
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.json_to_sheet(datos);
+  ws['!cols'] = [22,10,10,10,14,14,22,18,14,10,18,16,16,14,30].map(function(w){return{wch:w};});
+  XLSX.utils.book_append_sheet(wb, ws, 'Campana '+campana);
+  XLSX.writeFile(wb, 'PAC_'+usuarioActual.nombre+'_'+campana+'.xlsx');
+  toast('Excel campaña '+campana+' exportado');
 }
 
 function descargarPlantilla(mode) {
@@ -1239,6 +1333,10 @@ function bindModalEvents() {
   if(btnCS) btnCS.onclick = function(){ cerrarSesionConfirm(); };
   var btnCPer = document.getElementById('btnCancelarPerfil');
   if(btnCPer) btnCPer.onclick = function(){ cerrarModal('modalPerfil'); };
+
+  // Modal exportar
+  var btnCE = document.getElementById('btnCerrarExportar');
+  if(btnCE) btnCE.onclick = function(){ cerrarModal('modalExportar'); };
 
   // Campana bar
   var sel = document.getElementById('selectCampana');
