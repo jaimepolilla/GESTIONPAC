@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#3d6b2f">
+<title>PAC Gestion</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--verde:#3d6b2f;--verde-claro:#5a8f47;--verde-fondo:#edf3ea;--tierra:#8b5e3c;--tierra-claro:#f5ede4;--gris:#4a4a4a;--gris-claro:#f2f2f2;--blanco:#ffffff;--rojo:#c0392b;--azul:#2471a3;--azul-claro:#d6eaf8;--naranja:#e67e22;--naranja-claro:#fef0e7;--borde:#d0dcc9;--sombra:0 2px 8px rgba(0,0,0,0.10);--radio:12px;--font:"Segoe UI",system-ui,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--verde-fondo);color:var(--gris);min-height:100vh;padding-bottom:80px;}
+.screen{display:none;position:fixed;inset:0;z-index:600;flex-direction:column;align-items:center;justify-content:center;padding:28px 24px;background:var(--verde-fondo);overflow-y:auto;}
+.screen.active{display:flex;}
+.screen-logo{font-size:60px;margin-bottom:12px;}
+.screen-title{font-size:26px;font-weight:800;color:var(--verde);margin-bottom:4px;}
+.screen-sub{font-size:14px;color:#888;margin-bottom:32px;text-align:center;}
+.pin-field{width:160px;height:58px;border:2px solid var(--borde);border-radius:12px;font-size:28px;text-align:center;letter-spacing:10px;font-weight:700;background:var(--blanco);color:var(--gris);outline:none;display:block;margin:10px auto;}
+.pin-field:focus{border-color:var(--verde);}
+.user-list{width:100%;max-width:380px;}
+.user-item{display:flex;align-items:center;gap:14px;background:var(--blanco);border-radius:var(--radio);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sombra);cursor:pointer;border:2px solid transparent;width:100%;text-align:left;font-family:var(--font);font-size:inherit;color:inherit;}
+.user-item:active{border-color:var(--verde);}.user-item *{pointer-events:none;}
+.user-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;flex-shrink:0;}
+.user-name{font-size:16px;font-weight:700;}
+.user-meta{font-size:12px;color:#888;margin-top:2px;}
+.btn-link{background:none;border:none;color:var(--verde);font-size:14px;font-weight:600;cursor:pointer;padding:8px;text-decoration:underline;}
+header{background:var(--verde);color:var(--blanco);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:var(--sombra);}
+.header-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);cursor:pointer;}
+header h1{font-size:18px;font-weight:700;}
+header small{font-size:11px;opacity:0.8;display:block;}
+.header-right{margin-left:auto;display:flex;gap:6px;}
+.btn-header{background:rgba(255,255,255,0.18);border:none;color:white;border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;white-space:nowrap;}
+.btn-header:active{background:rgba(255,255,255,0.3);}
+.page{display:none;padding:16px;}
+.page.active{display:block;}
+.card{background:var(--blanco);border-radius:var(--radio);box-shadow:var(--sombra);padding:16px;margin-bottom:12px;}
+.card-title{font-size:17px;font-weight:700;color:var(--verde);}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.card-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.badge{background:var(--verde-fondo);color:var(--verde);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;border:1px solid var(--borde);}
+.badge.regadio{background:var(--azul-claro);color:var(--azul);border-color:#aed6f1;}
+.badge.secano{background:#fef9e7;color:#b7950b;border-color:#f9e79f;}
+.card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--borde);}
+.btn-sm{flex:1;padding:8px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-edit{background:var(--verde-fondo);color:var(--verde);}
+.btn-del{background:#fdecea;color:var(--rojo);}
+.sigpac-ref{font-family:monospace;font-size:11px;color:#888;background:var(--gris-claro);padding:2px 7px;border-radius:5px;margin-top:4px;display:inline-block;}
+.poligono-info{font-size:12px;color:#666;margin-top:3px;}
+.fab{position:fixed;bottom:90px;right:20px;background:var(--verde);color:white;border:none;border-radius:50%;width:56px;height:56px;font-size:26px;box-shadow:0 4px 16px rgba(61,107,47,0.4);cursor:pointer;z-index:200;display:flex;align-items:center;justify-content:center;}
+.fab:active{transform:scale(0.94);}
+.fab.hidden{display:none;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.stat-card{background:var(--blanco);border-radius:var(--radio);padding:16px;box-shadow:var(--sombra);text-align:center;}
+.stat-num{font-size:30px;font-weight:800;color:var(--verde);line-height:1;}
+.stat-label{font-size:12px;color:#888;margin-top:4px;}
+.stat-card.tierra .stat-num{color:var(--tierra);}
+.stat-card.azul .stat-num{color:var(--azul);}
+.pac-parcela-card{background:var(--blanco);border-radius:var(--radio);box-shadow:var(--sombra);margin-bottom:14px;overflow:hidden;}
+.pac-parcela-header{padding:14px 16px 10px;cursor:pointer;display:flex;align-items:flex-start;gap:12px;}
+.pac-parcela-header:active{background:#f9f9f9;}
+.pac-parcela-icon{font-size:22px;flex-shrink:0;padding-top:2px;}
+.pac-parcela-info{flex:1;min-width:0;}
+.pac-parcela-name{font-size:16px;font-weight:700;color:var(--gris);}
+.pac-parcela-meta{font-size:12px;color:#888;margin-top:2px;}
+.pac-parcela-right{text-align:right;flex-shrink:0;}
+.pac-sup-total{font-size:17px;font-weight:800;color:var(--tierra);}
+.pac-sup-label{font-size:11px;color:#aaa;}
+.pac-progress-wrap{padding:0 16px 6px;}
+.pac-progress-bar-bg{height:8px;border-radius:4px;background:var(--gris-claro);overflow:hidden;}
+.pac-progress-bar-fill{height:100%;border-radius:4px;background:var(--verde-claro);transition:width 0.3s;}
+.pac-progress-bar-fill.llena{background:var(--verde);}
+.pac-progress-bar-fill.excede{background:var(--rojo);}
+.pac-progress-labels{display:flex;justify-content:space-between;font-size:11px;color:#888;margin-top:4px;}
+.pac-progress-labels .usado{font-weight:700;color:var(--gris);}
+.pac-cultivos-list{padding:0 16px 4px;}
+.pac-cultivo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--borde);}
+.pac-cultivo-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.pac-cultivo-nombre{font-size:14px;font-weight:600;flex:1;}
+.pac-cultivo-semilla{font-size:12px;color:#888;}
+.pac-cultivo-ha{font-size:14px;font-weight:700;color:var(--tierra);white-space:nowrap;}
+.pac-cultivo-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;}
+.pac-add-btn{margin:6px 16px 14px;width:calc(100% - 32px);padding:10px;background:var(--verde-fondo);color:var(--verde);border:1.5px dashed var(--borde);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;}
+.pac-sin-cultivo{padding:10px 16px 14px;font-size:13px;color:#aaa;font-style:italic;border-top:1px solid var(--borde);}
+.semilla-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde);}
+.semilla-item:last-child{border-bottom:none;}
+.semilla-icon{width:40px;height:40px;border-radius:10px;background:var(--verde-fondo);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.semilla-name{font-weight:700;font-size:15px;}
+.semilla-sub{font-size:12px;color:#888;margin-top:2px;}
+.semilla-del{margin-left:auto;background:none;border:none;color:#ccc;font-size:20px;cursor:pointer;padding:4px 8px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;align-items:flex-end;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--blanco);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:92vh;overflow-y:auto;animation:slideUp 0.25s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-title{font-size:19px;font-weight:800;color:var(--verde);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:var(--gris-claro);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+label{display:block;font-size:13px;font-weight:600;color:#666;margin-bottom:5px;margin-top:14px;}
+input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--borde);border-radius:10px;font-size:15px;font-family:var(--font);background:var(--blanco);color:var(--gris);outline:none;transition:border-color 0.2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--verde);}
+textarea{resize:vertical;min-height:80px;}
+input[readonly]{background:var(--gris-claro);color:#888;cursor:default;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.section-divider{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#aaa;margin:18px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--borde);}
+.disponible-box{background:var(--verde-fondo);border:1px solid var(--borde);border-radius:10px;padding:10px 14px;margin-top:14px;display:flex;align-items:center;gap:10px;}
+.disponible-box.warn{background:var(--naranja-claro);border-color:#f5cba7;}
+.disponible-box.error{background:#fdecea;border-color:#f1948a;}
+.disponible-label{font-size:12px;color:#888;}
+.disponible-val{font-size:20px;font-weight:800;color:var(--verde);}
+.disponible-box.warn .disponible-val{color:var(--naranja);}
+.disponible-box.error .disponible-val{color:var(--rojo);}
+.btn-primary{width:100%;padding:15px;background:var(--verde);color:white;border:none;border-radius:var(--radio);font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;}
+.btn-primary:active{background:var(--verde-claro);}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed;}
+.btn-secondary{width:100%;padding:13px;background:var(--gris-claro);color:var(--gris);border:none;border-radius:var(--radio);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
+.btn-danger{width:100%;padding:13px;background:#fdecea;color:var(--rojo);border:none;border-radius:var(--radio);font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;}
+.upload-area{border:2px dashed var(--borde);border-radius:var(--radio);padding:32px 20px;text-align:center;cursor:pointer;background:var(--verde-fondo);}
+.upload-area:active{border-color:var(--verde);}
+.upload-icon{font-size:48px;margin-bottom:10px;}
+.upload-text{font-size:15px;color:#666;}
+.upload-hint{font-size:12px;color:#aaa;margin-top:6px;}
+.format-box{background:#f0f7ff;border:1px solid #aed6f1;border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+.format-box .format-title{font-size:13px;font-weight:700;color:var(--azul);margin-bottom:6px;}
+.format-col-list{display:flex;flex-wrap:wrap;gap:5px;}
+.format-col{background:white;border:1px solid #aed6f1;border-radius:6px;padding:2px 8px;font-size:11px;color:var(--azul);font-weight:600;}
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;overflow-x:auto;display:block;}
+.preview-table th{background:var(--verde);color:white;padding:8px 10px;text-align:left;white-space:nowrap;}
+.preview-table td{padding:7px 10px;border-bottom:1px solid var(--borde);white-space:nowrap;}
+.preview-table tr:nth-child(even) td{background:var(--verde-fondo);}
+.import-mode-tabs{display:flex;gap:8px;margin-bottom:14px;}
+.import-mode-tab{flex:1;padding:10px 8px;text-align:center;border:2px solid var(--borde);border-radius:10px;font-size:13px;font-weight:600;color:#888;cursor:pointer;}
+.import-mode-tab.active{border-color:var(--verde);color:var(--verde);background:var(--verde-fondo);}
+.search-bar{display:flex;align-items:center;background:var(--blanco);border:1.5px solid var(--borde);border-radius:10px;padding:10px 14px;gap:8px;margin-bottom:14px;}
+.search-bar input{border:none;outline:none;flex:1;font-size:15px;padding:0;}
+.filter-row{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+.filter-chip{padding:6px 12px;border-radius:20px;border:1.5px solid var(--borde);background:var(--blanco);font-size:12px;font-weight:600;color:#888;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.filter-chip.active{background:var(--verde);color:white;border-color:var(--verde);}
+.empty{text-align:center;padding:40px 20px;color:#aaa;}
+.empty-icon{font-size:52px;margin-bottom:12px;}
+.empty-text{font-size:15px;}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#222;color:white;padding:12px 20px;border-radius:20px;font-size:14px;opacity:0;transition:all 0.3s;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1px solid var(--borde);display:flex;z-index:100;}
+.nav-item{flex:1;padding:10px 8px 12px;text-align:center;cursor:pointer;color:#aaa;font-size:11px;font-weight:600;}
+.nav-item.active{color:var(--verde);}
+.nav-item span{display:block;font-size:22px;margin-bottom:2px;}
+.campana-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.campana-bar select{flex:1;padding:10px 12px;font-size:14px;}
+.btn-nueva-campana{background:var(--verde);color:white;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-bienvenida{width:100%;max-width:380px;display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:10px;background:var(--blanco);border:1.5px solid var(--borde);border-radius:var(--radio);cursor:pointer;text-align:left;box-shadow:var(--sombra);}
+.btn-bienvenida:active{background:var(--verde-fondo);}
+.btn-bienvenida-icon{font-size:28px;flex-shrink:0;}
+.btn-bienvenida-title{font-size:16px;font-weight:700;color:var(--gris);}
+.btn-bienvenida-sub{font-size:12px;color:#888;margin-top:2px;}
+.av-0{background:#3d6b2f}.av-1{background:#2471a3}.av-2{background:#8b5e3c}.av-3{background:#8e44ad}.av-4{background:#c0392b}.av-5{background:#16a085}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="screen active" id="screenLogin">
+  <div class="screen-logo">&#127806;</div>
+  <div class="screen-title">PAC Gestion</div>
+  <div class="screen-sub">Selecciona tu usuario</div>
+  <div class="user-list" id="loginUserList"></div>
+  <button class="btn-link" onclick="showScreen('screenRegister')">+ Crear nuevo usuario</button>
+  <div style="width:100%;max-width:380px;margin-top:24px;border-top:1px solid var(--borde);padding-top:20px">
+    <div style="font-size:13px;color:#aaa;text-align:center;margin-bottom:12px">
+      &#128260; Accedes desde otro dispositivo?
+    </div>
+    <button class="btn-bienvenida" onclick="document.getElementById('fileInputLoginRestore').click()" style="justify-content:center;gap:10px">
+      <span style="font-size:22px">&#128194;</span>
+      <div>
+        <div class="btn-bienvenida-title">Restaurar mis datos</div>
+        <div class="btn-bienvenida-sub">Carga tu fichero de copia .json</div>
+      </div>
+    </button>
+    <input type="file" id="fileInputLoginRestore" accept=".json" style="display:none" onchange="restaurarCopiaLogin(event)">
+  </div>
+</div>
+
+<!-- REGISTRO -->
+<div class="screen" id="screenRegister">
+  <div class="screen-logo">&#128100;</div>
+  <div class="screen-title">Nuevo usuario</div>
+  <div class="screen-sub">Crea tu perfil</div>
+  <div style="width:100%;max-width:380px">
+    <label>Nombre</label>
+    <input type="text" id="regNombre" placeholder="Tu nombre" maxlength="20" onkeydown="if(event.key==='Enter')registrarUsuario()">
+    <div id="regError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:8px"></div>
+    <button class="btn-primary" onclick="registrarUsuario()">Crear usuario</button>
+    <button class="btn-secondary" onclick="showScreen('screenLogin')">Cancelar</button>
+  </div>
+</div>
+
+<!-- SPLASH -->
+<div class="screen" id="screenSplash">
+  <div class="screen-logo">&#127806;</div>
+  <div class="screen-title" id="splashBienvenida">Bienvenido!</div>
+  <div class="screen-sub">Como quieres anadir tus parcelas?</div>
+  <button class="btn-bienvenida" onclick="splashImportar()">
+    <span class="btn-bienvenida-icon">&#128202;</span>
+    <div><div class="btn-bienvenida-title">Importar desde Excel</div><div class="btn-bienvenida-sub">Sube tu fichero SIGPAC o formato propio</div></div>
+    <span style="color:#ccc;font-size:20px">&#8250;</span>
+  </button>
+  <button class="btn-bienvenida" onclick="splashManual()">
+    <span class="btn-bienvenida-icon">&#9998;</span>
+    <div><div class="btn-bienvenida-title">Anadir parcelas a mano</div><div class="btn-bienvenida-sub">Introduce las parcelas una por una</div></div>
+    <span style="color:#ccc;font-size:20px">&#8250;</span>
+  </button>
+  <button class="btn-link" style="margin-top:12px" onclick="splashSaltar()">Ahora no</button>
+</div>
+
+<!-- HEADER -->
+<header id="appHeader" style="display:none">
+  <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
+  <div><h1>PAC Gestion</h1><small id="headerCampana"></small></div>
+  <div class="header-right">
+    <button class="btn-header" onclick="exportarExcel()">Excel</button>
+    <button class="btn-header" onclick="hacerCopia()">Copia</button>
+    <button class="btn-header" onclick="document.getElementById('fileInputRestore').click()">Restaurar</button>
+    <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
+  </div>
+</header>
+
+<!-- PAC -->
+<div id="page-pac" class="page">
+  <div class="campana-bar">
+    <select id="selectCampana"></select>
+    <button class="btn-nueva-campana" id="btnNuevaCampana">+ Campaña</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="statParcelas">-</div><div class="stat-label">Parcelas</div></div>
+    <div class="stat-card tierra"><div class="stat-num" id="statHa">-</div><div class="stat-label">Ha totales</div></div>
+    <div class="stat-card azul"><div class="stat-num" id="statDeclaradas">-</div><div class="stat-label">Ha declaradas</div></div>
+    <div class="stat-card"><div class="stat-num" id="statPendientes">-</div><div class="stat-label">Ha pendientes</div></div>
+  </div>
+  <div class="search-bar"><span>&#128269;</span><input type="text" id="searchPAC" placeholder="Buscar parcela..." oninput="renderPAC()"></div>
+  <div id="listaPAC"></div>
+</div>
+
+<!-- PARCELAS -->
+<div id="page-parcelas" class="page">
+  <div class="search-bar"><span>&#128269;</span><input type="text" id="searchParcela" placeholder="Buscar..." oninput="renderParcelas()"></div>
+  <div class="filter-row">
+    <div class="filter-chip active" onclick="setFiltro('todos')">Todas</div>
+    <div class="filter-chip" onclick="setFiltro('R')">Regadio</div>
+    <div class="filter-chip" onclick="setFiltro('S')">Secano</div>
+  </div>
+  <div id="listaParcelas"></div>
+</div>
+
+<!-- SEMILLAS -->
+<div id="page-semillas" class="page">
+  <div class="card"><div class="card-title" style="margin-bottom:12px">Mis semillas</div><div id="listaSemillas"></div></div>
+  <div class="card" style="margin-top:12px">
+    <div class="card-title" style="margin-bottom:12px">Anadir semilla</div>
+    <input type="text" id="nuevaSemillaNombre" placeholder="Nombre de la semilla...">
+    <div class="form-row" style="margin-top:10px">
+      <input type="text" id="nuevaSemillaTipo" placeholder="Tipo">
+      <input type="text" id="nuevaSemillaVariedad" placeholder="Variedad">
+    </div>
+    <button class="btn-primary" style="margin-top:12px" onclick="agregarSemilla()">+ Anadir semilla</button>
+  </div>
+</div>
+
+<!-- IMPORTAR -->
+<div id="page-importar" class="page">
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--azul)">
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="font-size:22px">&#128260;</div>
+      <div><div style="font-size:14px;font-weight:700;color:var(--azul);margin-bottom:4px">Compartir entre dispositivos</div>
+      <div style="font-size:13px;color:#666">Usa <strong>Copia</strong> para guardar tus datos y <strong>Restaurar</strong> para cargarlos en otro dispositivo.</div></div>
+    </div>
+  </div>
+  <div class="import-mode-tabs">
+    <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
+    <div class="import-mode-tab" id="modeTabCustom" onclick="setImportMode('custom')">Formato propio</div>
+  </div>
+  <div id="importSIGPAC">
+    <div class="format-box">
+      <div class="format-title">Columnas SIGPAC</div>
+      <div class="format-col-list">
+        <span class="format-col">Referencia SIGPAC</span><span class="format-col">Poligono</span><span class="format-col">Parcela</span><span class="format-col">Recinto</span><span class="format-col">Superficie TOTAL</span><span class="format-col">REGADIO / SECANO</span><span class="format-col">NOMBRE PARCELA</span><span class="format-col">POBLACION</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px">Importar Excel SIGPAC</div>
+      <div class="upload-area" onclick="document.getElementById('fileInputSIGPAC').click()">
+        <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
+      </div>
+      <input type="file" id="fileInputSIGPAC" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'sigpac')">
+      <div id="previewContainerSIGPAC" style="display:none;margin-top:16px">
+        <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountSIGPAC">0</span> parcelas)</div>
+        <div style="overflow-x:auto"><table class="preview-table" id="previewTableSIGPAC"></table></div>
+        <button class="btn-primary" onclick="confirmarImportacion('sigpac')">Importar parcelas</button>
+        <button class="btn-secondary" onclick="cancelarImportacion('sigpac')">Cancelar</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title" style="margin-bottom:8px">Plantilla SIGPAC</div>
+      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('sigpac')">Descargar plantilla SIGPAC</button>
+    </div>
+  </div>
+  <div id="importCustom" style="display:none">
+    <div class="format-box">
+      <div class="format-title">Columnas formato propio</div>
+      <div class="format-col-list">
+        <span class="format-col">Nombre</span><span class="format-col">Referencia Catastral</span><span class="format-col">Superficie (ha)</span><span class="format-col">Municipio</span><span class="format-col">Provincia</span><span class="format-col">Cultivo</span><span class="format-col">Semilla</span><span class="format-col">Fecha Siembra</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:8px">Importar Excel propio</div>
+      <div class="upload-area" onclick="document.getElementById('fileInputCustom').click()">
+        <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
+      </div>
+      <input type="file" id="fileInputCustom" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'custom')">
+      <div id="previewContainerCustom" style="display:none;margin-top:16px">
+        <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountCustom">0</span> parcelas)</div>
+        <div style="overflow-x:auto"><table class="preview-table" id="previewTableCustom"></table></div>
+        <button class="btn-primary" onclick="confirmarImportacion('custom')">Importar parcelas</button>
+        <button class="btn-secondary" onclick="cancelarImportacion('custom')">Cancelar</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-title" style="margin-bottom:8px">Plantilla formato propio</div>
+      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('custom')">Descargar plantilla</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PARCELA -->
+<div class="modal-overlay" id="modalParcela">
+  <div class="modal">
+    <div class="modal-title"><span id="modalParcelaTitle">Nueva parcela</span><button class="modal-close" onclick="cerrarModal('modalParcela')">X</button></div>
+    <input type="hidden" id="parcelaId">
+    <div class="section-divider">Datos generales</div>
+    <label>Nombre *</label><input type="text" id="parcelaNombre" placeholder="Nombre">
+    <div class="form-row">
+      <div><label>Superficie (ha) *</label><input type="number" id="parcelaSuperficie" placeholder="0.00" step="0.01" min="0"></div>
+      <div><label>Regadio / Secano</label>
+        <select id="parcelaRegadio"><option value="">Sin definir</option><option value="R">Regadio</option><option value="S">Secano</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div><label>Municipio</label><input type="text" id="parcelaMunicipio" placeholder="Municipio"></div>
+      <div><label>Provincia</label><input type="text" id="parcelaProvincia" placeholder="Provincia"></div>
+    </div>
+    <div class="section-divider">Datos SIGPAC</div>
+    <label>Referencia SIGPAC</label><input type="text" id="parcelaRefSIGPAC" placeholder="Ej: 9-403-0-0-501-15-1">
+    <div class="form-row-3">
+      <div><label>Poligono</label><input type="number" id="parcelaPoligono"></div>
+      <div><label>Parcela</label><input type="number" id="parcelaParcela"></div>
+      <div><label>Recinto</label><input type="number" id="parcelaRecinto"></div>
+    </div>
+    <label>Ref. Catastral</label><input type="text" id="parcelaRef">
+    <label>Notas</label><textarea id="parcelaNotas"></textarea>
+    <button class="btn-primary" id="btnGuardarParcela">Guardar parcela</button>
+    <button class="btn-secondary" id="btnCancelarParcela">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CULTIVO -->
+<div class="modal-overlay" id="modalCultivo">
+  <div class="modal">
+    <div class="modal-title"><span id="modalCultivoTitle">Declarar cultivo</span><button class="modal-close" onclick="cerrarModal('modalCultivo')">X</button></div>
+    <input type="hidden" id="cultivoParcelaId">
+    <input type="hidden" id="cultivoLineaId">
+    <div id="cultivoParcelaInfo" style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:4px">
+      <div style="font-size:13px;color:#888">Parcela</div>
+      <div id="cultivoParcelaNombre" style="font-size:17px;font-weight:700"></div>
+      <div id="cultivoParcelaMeta" style="font-size:12px;color:#888;margin-top:2px"></div>
+    </div>
+    <div class="disponible-box" id="disponibleBox">
+      <div><div class="disponible-label">Superficie disponible</div><div class="disponible-val" id="disponibleVal">- ha</div></div>
+      <div style="margin-left:auto;font-size:12px;color:#888;text-align:right"><div id="disponibleUsado"></div><div id="disponibleTotal"></div></div>
+    </div>
+    <label>Cultivo *</label>
+    <input type="text" id="cultivoCultivo" placeholder="Trigo, Girasol..." list="cultivosSuggestions">
+    <datalist id="cultivosSuggestions"></datalist>
+    <label>Semilla / Variedad</label>
+    <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    <label>Superficie a declarar (ha) *</label>
+    <input type="number" id="cultivoSuperficie" placeholder="0.00" step="0.01" min="0.01">
+    <label>Fecha de siembra</label><input type="date" id="cultivoFechaSiembra">
+    <label>Notas</label><input type="text" id="cultivoNotas">
+    <button class="btn-primary" id="btnGuardarCultivo" id="btnGuardarCultivo">Guardar</button>
+    <button class="btn-secondary" id="btnCancelarCultivo">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CAMPANA -->
+<div class="modal-overlay" id="modalCampana">
+  <div class="modal" style="max-height:50vh">
+    <div class="modal-title"><span>Nueva campaña</span><button class="modal-close" onclick="cerrarModal('modalCampana')">X</button></div>
+    <label>Año de la campaña</label>
+    <input type="number" id="inputNuevaCampana" placeholder="2026" min="2000" max="2100" onkeydown="if(event.key==='Enter')confirmarNuevaCampana()">
+    <button class="btn-primary" id="btnConfirmarCampana">Crear campaña</button>
+    <button class="btn-secondary" id="btnCancelarCampana">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL PERFIL -->
+<div class="modal-overlay" id="modalPerfil">
+  <div class="modal" style="max-height:50vh">
+    <div class="modal-title"><span id="perfilNombreTitle">Mi perfil</span><button class="modal-close" onclick="cerrarModal('modalPerfil')">X</button></div>
+    <div style="text-align:center;padding:10px 0 16px">
+      <div id="perfilAvatar" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:white;margin:0 auto 10px"></div>
+      <div id="perfilNombreGrande" style="font-size:20px;font-weight:700"></div>
+    </div>
+    <button class="btn-danger" id="btnCerrarSesion">Cerrar sesion</button>
+    <button class="btn-secondary" id="btnCancelarPerfil">Cancelar</button>
+  </div>
+</div>
+
+<button class="fab hidden" id="fabBtn" onclick="abrirModalNuevaParcela()">+</button>
+<div class="toast" id="toast"></div>
+
+<nav id="appNav" style="display:none">
+  <div class="nav-item active" onclick="showPage('pac')"><span>&#128203;</span>PAC</div>
+  <div class="nav-item" onclick="showPage('parcelas')"><span>&#128506;</span>Parcelas</div>
+  <div class="nav-item" onclick="showPage('semillas')"><span>&#127807;</span>Semillas</div>
+  <div class="nav-item" onclick="showPage('importar')"><span>&#128229;</span>Importar</div>
+</nav>
+
+<script>
+var DB = {
+  get: function(k, def) { try { var v=JSON.parse(localStorage.getItem(k)); return v!==null?v:def; } catch(e) { return def; } },
+  set: function(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+  del: function(k) { localStorage.removeItem(k); }
+};
+
+var usuarios = DB.get('pac_usuarios', []);
+var usuarioActual = null;
+var campanaActual, campanas, parcelas, semillas, declaraciones;
+var COLORES = ['#3d6b2f','#2471a3','#8b5e3c','#8e44ad','#c0392b','#16a085','#d35400','#2c3e50'];
+var importPreviewSIGPAC = [];
+var importPreviewCustom = [];
+var filtroActual = 'todos';
+
+function uk(key) { return 'u_' + usuarioActual.id + '_' + key; }
+
+function loadUserData() {
+  campanaActual = DB.get(uk('campanaActual'), '');
+  campanas      = DB.get(uk('campanas'), []);
+  parcelas      = DB.get(uk('parcelas'), []);
+  semillas      = DB.get(uk('semillas'), []);
+  declaraciones = DB.get(uk('declaraciones'), []);
+}
+
+function save() {
+  DB.set(uk('campanaActual'), campanaActual);
+  DB.set(uk('campanas'),      campanas);
+  DB.set(uk('parcelas'),      parcelas);
+  DB.set(uk('semillas'),      semillas);
+  DB.set(uk('declaraciones'), declaraciones);
+}
+
+function restaurarCopiaLogin(event) {
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var datos = JSON.parse(e.target.result);
+      if(!datos.parcelas || !datos.campanas) { alert('Archivo no valido'); return; }
+      // Find or create user from backup
+      var nombreUsuario = datos.usuario || 'Usuario';
+      var uid = null;
+      // Check if user already exists
+      for(var i=0;i<usuarios.length;i++) {
+        if(usuarios[i].nombre.toLowerCase() === nombreUsuario.toLowerCase()) {
+          uid = usuarios[i].id; break;
+        }
+      }
+      if(!uid) {
+        // Create user from backup
+        var u = { id: String(Date.now()), nombre: nombreUsuario, colorIdx: usuarios.length };
+        usuarios.push(u);
+        DB.set('pac_usuarios', usuarios);
+        uid = u.id;
+      }
+      // Restore data under that user
+      DB.set('u_'+uid+'_campanaActual', datos.campanaActual || '');
+      DB.set('u_'+uid+'_campanas',      datos.campanas      || []);
+      DB.set('u_'+uid+'_parcelas',      datos.parcelas      || []);
+      DB.set('u_'+uid+'_semillas',      datos.semillas      || []);
+      DB.set('u_'+uid+'_declaraciones', datos.declaraciones || []);
+      renderLoginUsers();
+      alert('Datos de ' + nombreUsuario + ' restaurados. Ya puedes seleccionar tu usuario.');
+    } catch(err) {
+      alert('Error al leer el archivo: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for(var i=0;i<screens.length;i++) screens[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+}
+function hideScreens() {
+  var screens = document.querySelectorAll('.screen');
+  for(var i=0;i<screens.length;i++) screens[i].classList.remove('active');
+}
+
+function renderLoginUsers() {
+  var list = document.getElementById('loginUserList');
+  if (!usuarios.length) {
+    list.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:14px">No hay usuarios. Crea uno nuevo.</div>';
+    return;
+  }
+  var html = '';
+  for(var i=0;i<usuarios.length;i++) {
+    var u = usuarios[i];
+    var np = (DB.get('u_'+u.id+'_parcelas') || []).length;
+    html += '<button class="user-item" data-uid="' + u.id + '">' +
+      '<div class="user-avatar av-' + (u.colorIdx % 6) + '">' + u.nombre.charAt(0).toUpperCase() + '</div>' +
+      '<div><div class="user-name">' + u.nombre + '</div>' +
+      '<div class="user-meta">' + np + ' parcelas</div></div>' +
+      '<div style="margin-left:auto;color:#ccc;font-size:20px">&#8250;</div></button>';
+  }
+  list.innerHTML = html;
+  // Attach events after rendering
+  var btns = list.querySelectorAll('.user-item');
+  for(var i=0;i<btns.length;i++) {
+    btns[i].addEventListener('click', function() {
+      entrarApp(this.getAttribute('data-uid'));
+    });
+  }
+}
+
+function registrarUsuario() {
+  var nombre = document.getElementById('regNombre').value.trim();
+  var err    = document.getElementById('regError');
+  if(!nombre) { err.textContent='El nombre es obligatorio'; return; }
+  for(var i=0;i<usuarios.length;i++) {
+    if(usuarios[i].nombre.toLowerCase()===nombre.toLowerCase()) { err.textContent='Ya existe ese usuario'; return; }
+  }
+  var u = { id: String(Date.now()), nombre: nombre, colorIdx: usuarios.length };
+  usuarios.push(u);
+  DB.set('pac_usuarios', usuarios);
+  err.textContent = '';
+  entrarApp(u.id);
+}
+
+function entrarApp(uid) {
+  // Accept id string or user object
+  var id = typeof uid === 'object' ? uid.id : String(uid);
+  var u = null;
+  for(var i=0;i<usuarios.length;i++) {
+    if(String(usuarios[i].id) === id) { u = usuarios[i]; break; }
+  }
+  if(!u) { alert('Usuario no encontrado: ' + id); return; }
+  usuarioActual = u;
+  DB.set('pac_lastUser', u.id);
+  loadUserData();
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('appNav').style.display = 'flex';
+  hideScreens();
+  var av = document.getElementById('headerAvatar');
+  av.textContent = u.nombre.charAt(0).toUpperCase();
+  av.className = 'header-avatar av-' + (u.colorIdx % 6);
+  if(!parcelas.length) {
+    document.getElementById('splashBienvenida').textContent = 'Hola, ' + u.nombre + '!';
+    showScreen('screenSplash');
+  } else {
+    iniciarApp();
+  }
+}
+
+function iniciarApp() {
+  hideScreens();
+  renderCampanas();
+  showPage('pac');
+  bindModalEvents();
+}
+
+function abrirPerfil() {
+  var u = usuarioActual;
+  document.getElementById('perfilNombreTitle').textContent = u.nombre;
+  document.getElementById('perfilNombreGrande').textContent = u.nombre;
+  var av = document.getElementById('perfilAvatar');
+  av.textContent = u.nombre.charAt(0).toUpperCase();
+  av.className = 'av-' + (u.colorIdx % 6);
+  document.getElementById('modalPerfil').classList.add('open');
+}
+
+function cerrarSesionConfirm() {
+  cerrarModal('modalPerfil');
+  usuarioActual = null;
+  DB.del('pac_lastUser');
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('appNav').style.display = 'none';
+  var pages = document.querySelectorAll('.page');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('active');
+  renderLoginUsers();
+  showScreen('screenLogin');
+}
+
+function splashImportar() { hideScreens(); iniciarApp(); showPage('importar'); }
+function splashManual()   { hideScreens(); iniciarApp(); showPage('parcelas'); abrirModalNuevaParcela(); }
+function splashSaltar()   { iniciarApp(); }
+
+function showPage(name) {
+  var pages = document.querySelectorAll('.page');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('active');
+  var navItems = document.querySelectorAll('.nav-item');
+  for(var i=0;i<navItems.length;i++) navItems[i].classList.remove('active');
+  document.getElementById('page-' + name).classList.add('active');
+  var idx = ['pac','parcelas','semillas','importar'].indexOf(name);
+  if(idx>=0) navItems[idx].classList.add('active');
+  document.getElementById('fabBtn').classList.toggle('hidden', name !== 'parcelas');
+  if(name==='pac')      renderPAC();
+  if(name==='parcelas') renderParcelas();
+  if(name==='semillas') renderSemillas();
+}
+
+function renderCampanas() {
+  var sel = document.getElementById('selectCampana');
+  if(!campanas.length) {
+    sel.innerHTML = '<option value="">Sin campaña</option>';
+    document.getElementById('headerCampana').textContent = '';
+  } else {
+    var html = '';
+    for(var i=0;i<campanas.length;i++) {
+      html += '<option value="' + campanas[i] + '"' + (campanas[i]===campanaActual?' selected':'') + '>' + campanas[i] + '</option>';
+    }
+    sel.innerHTML = html;
+    // Make sure campanaActual is set to the selected value
+    if(!campanaActual && campanas.length) campanaActual = campanas[0];
+    sel.value = campanaActual;
+    document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
+  }
+  // Attach change event
+  sel.onchange = function() { cambiarCampana(); };
+  // Attach nueva campaña button
+  var btn = document.getElementById('btnNuevaCampana');
+  if(btn) btn.onclick = function() { nuevaCampana(); };
+}
+
+
+function cambiarCampana() {
+  var sel = document.getElementById('selectCampana');
+  campanaActual = sel.value;
+  document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
+  save();
+  renderPAC();
+}
+
+
+function nuevaCampana() {
+  document.getElementById('inputNuevaCampana').value = new Date().getFullYear() + 1;
+  document.getElementById('modalCampana').classList.add('open');
+  setTimeout(function(){ document.getElementById('inputNuevaCampana').focus(); }, 300);
+}
+
+function confirmarNuevaCampana() {
+  var ano = document.getElementById('inputNuevaCampana').value.trim();
+  if(!ano || isNaN(ano)) { toast('Indica un año válido', true); return; }
+  var c = String(parseInt(ano));
+  for(var i=0;i<campanas.length;i++) { if(campanas[i]===c){ toast('Esa campaña ya existe',true); return; } }
+  campanas.push(c);
+  campanas.sort(function(a,b){ return parseInt(b)-parseInt(a); });
+  campanaActual = c;
+  save();
+  cerrarModal('modalCampana');
+  renderCampanas();
+  renderPAC();
+  toast('Campaña ' + c + ' creada');
+}
+
+function superUsada(parcelaId) {
+  var total = 0;
+  for(var i=0;i<declaraciones.length;i++) {
+    var d = declaraciones[i];
+    if(d.parcelaId===parcelaId && d.campana===campanaActual) total += parseFloat(d.superficie) || 0;
+  }
+  return total;
+}
+
+function colorCultivo(nombre) {
+  var h=0;
+  for(var i=0;i<nombre.length;i++) h=nombre.charCodeAt(i)+((h<<5)-h);
+  return COLORES[Math.abs(h)%COLORES.length];
+}
+
+function renderPAC() {
+  var cont = document.getElementById('listaPAC');
+  if(!campanaActual || !campanas.length) {
+    document.getElementById('statParcelas').textContent = '-';
+    document.getElementById('statHa').textContent = '-';
+    document.getElementById('statDeclaradas').textContent = '-';
+    document.getElementById('statPendientes').textContent = '-';
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div>' +
+      '<div class="empty-text" style="font-weight:700;color:var(--gris);margin-bottom:8px">Sin campa&#241;a activa</div>' +
+      '<div style="font-size:13px;color:#aaa;margin-bottom:20px">Crea una campa&#241;a para declarar cultivos</div>' +
+      '<button class="btn-crear-campana" style="background:var(--verde);color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer">+ Crear campa&#241;a</button></div>';
+    var btnC = cont.querySelector('.btn-crear-campana');
+    if(btnC) btnC.addEventListener('click', function(){ nuevaCampana(); });
+    return;
+  }
+  var q = document.getElementById('searchPAC').value.toLowerCase();
+  var psFiltradas = [];
+  for(var i=0;i<parcelas.length;i++) {
+    var p = parcelas[i];
+    if(!q || (p.nombre||'').toLowerCase().indexOf(q)>=0 || (p.municipio||'').toLowerCase().indexOf(q)>=0) {
+      psFiltradas.push(p);
+    }
+  }
+  var haTotal=0, haDecl=0;
+  for(var i=0;i<parcelas.length;i++) { haTotal += parseFloat(parcelas[i].superficie)||0; haDecl += superUsada(parcelas[i].id); }
+  document.getElementById('statParcelas').textContent   = parcelas.length;
+  document.getElementById('statHa').textContent         = haTotal.toFixed(2);
+  document.getElementById('statDeclaradas').textContent = haDecl.toFixed(2);
+  document.getElementById('statPendientes').textContent = Math.max(0,haTotal-haDecl).toFixed(2);
+  if(!psFiltradas.length) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div><div class="empty-text">' + (parcelas.length?'Sin resultados':'Importa o agrega parcelas primero') + '</div></div>';
+    return;
+  }
+  var html = '';
+  for(var i=0;i<psFiltradas.length;i++) {
+    var p = psFiltradas[i];
+    var total = parseFloat(p.superficie)||0;
+    var usada = superUsada(p.id);
+    var pct = total>0 ? Math.min(100,(usada/total)*100) : 0;
+    var excede = usada > total+0.001;
+    var fillClass = excede?'excede':(pct>=99.9?'llena':'');
+    var lineas = [];
+    for(var j=0;j<declaraciones.length;j++) {
+      if(declaraciones[j].parcelaId===p.id && declaraciones[j].campana===campanaActual) lineas.push(declaraciones[j]);
+    }
+    var lineasHTML = '';
+    if(lineas.length) {
+      for(var j=0;j<lineas.length;j++) {
+        var d = lineas[j];
+        lineasHTML += '<div class="pac-cultivo-row">' +
+          '<div class="pac-cultivo-dot" style="background:' + colorCultivo(d.cultivo) + '"></div>' +
+          '<div style="flex:1;min-width:0"><div class="pac-cultivo-nombre">' + d.cultivo + '</div>' +
+          (d.semilla?'<div class="pac-cultivo-semilla">Semilla: '+d.semilla+'</div>':'') +
+          (d.fechaSiembra?'<div class="pac-cultivo-semilla">Siembra: '+d.fechaSiembra+'</div>':'') +
+          '</div><div class="pac-cultivo-ha">' + parseFloat(d.superficie).toFixed(2) + ' ha</div>' +
+          '<div style="display:flex;gap:4px">' +
+          '<button class="pac-cultivo-btn pac-btn-editar" data-id="' + d.id + '">&#9998;</button>' +
+          '<button class="pac-cultivo-btn pac-btn-borrar" data-id="' + d.id + '">&#128465;</button>' +
+          '</div></div>';
+      }
+    } else {
+      lineasHTML = '<div class="pac-sin-cultivo">Sin cultivos declarados</div>';
+    }
+    html += '<div class="pac-parcela-card">' +
+      '<div class="pac-parcela-header pac-toggle" data-id="pb-' + p.id + '">' +
+      '<div class="pac-parcela-icon">' + (p.regadio==='R'?'&#128167;':'&#127807;') + '</div>' +
+      '<div class="pac-parcela-info"><div class="pac-parcela-name">' + p.nombre + '</div>' +
+      '<div class="pac-parcela-meta">' + (p.municipio||'') + (p.refSIGPAC?' | '+p.refSIGPAC:'') + '</div></div>' +
+      '<div class="pac-parcela-right"><div class="pac-sup-total">' + total.toFixed(2) + ' ha</div>' +
+      '<div class="pac-sup-label">' + (excede?'excedida':usada.toFixed(2)+' decl.') + '</div></div></div>' +
+      '<div class="pac-progress-wrap"><div class="pac-progress-bar-bg"><div class="pac-progress-bar-fill ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
+      '<div class="pac-progress-labels"><span class="usado">' + usada.toFixed(2) + ' ha usadas</span>' +
+      '<span' + (excede?' style="color:var(--rojo);font-weight:700"':'') + '>' + (excede?'Excede '+(usada-total).toFixed(2)+' ha':(total-usada).toFixed(2)+' ha libres') + '</span></div></div>' +
+      '<div id="pb-' + p.id + '">' +
+      '<div class="pac-cultivos-list">' + lineasHTML + '</div>' +
+      '<button class="pac-add-btn pac-btn-anadir" data-id="' + p.id + '">+ A&#241;adir cultivo</button>' +
+      '</div></div>';
+  }
+  cont.innerHTML = html;
+
+  // Attach all events via addEventListener (no inline onclick)
+  cont.querySelectorAll('.pac-toggle').forEach(function(el) {
+    el.addEventListener('click', function() { togglePacCard(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.pac-btn-anadir').forEach(function(el) {
+    el.addEventListener('click', function() { abrirModalCultivo(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.pac-btn-editar').forEach(function(el) {
+    el.addEventListener('click', function() { editarLineaCultivo(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.pac-btn-borrar').forEach(function(el) {
+    el.addEventListener('click', function() { eliminarLineaCultivo(this.getAttribute('data-id')); });
+  });
+}
+
+
+function togglePacCard(id) {
+  var el = document.getElementById(id);
+  if(el) el.style.display = el.style.display==='none'?'':'none';
+}
+
+function abrirModalCultivo(parcelaId, lineaId) {
+  var p = null;
+  for(var i=0;i<parcelas.length;i++) { if(parcelas[i].id===parcelaId){p=parcelas[i];break;} }
+  if(!p) return;
+  document.getElementById('cultivoParcelaId').value = parcelaId;
+  document.getElementById('cultivoLineaId').value   = lineaId || '';
+  document.getElementById('cultivoParcelaNombre').textContent = p.nombre;
+  document.getElementById('cultivoParcelaMeta').textContent = (p.municipio||'') + (p.superficie?' | '+p.superficie+' ha':'');
+  document.getElementById('modalCultivoTitle').textContent = lineaId ? 'Editar cultivo' : 'Declarar cultivo';
+  var sel = document.getElementById('cultivoSemilla');
+  sel.innerHTML = '<option value="">Sin semilla especifica</option>';
+  for(var i=0;i<semillas.length;i++) {
+    sel.innerHTML += '<option value="'+semillas[i].nombre+'">'+semillas[i].nombre+(semillas[i].variedad?' - '+semillas[i].variedad:'')+'</option>';
+  }
+  var dl = document.getElementById('cultivosSuggestions');
+  var cultUniq = {};
+  for(var i=0;i<declaraciones.length;i++) cultUniq[declaraciones[i].cultivo]=1;
+  dl.innerHTML = '';
+  for(var c in cultUniq) dl.innerHTML += '<option value="'+c+'">';
+  if(lineaId) {
+    var d = null;
+    for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id===lineaId){d=declaraciones[i];break;} }
+    if(d) {
+      document.getElementById('cultivoCultivo').value=d.cultivo||'';
+      document.getElementById('cultivoSemilla').value=d.semilla||'';
+      document.getElementById('cultivoSuperficie').value=d.superficie||'';
+      document.getElementById('cultivoFechaSiembra').value=d.fechaSiembra||'';
+      document.getElementById('cultivoNotas').value=d.notas||'';
+    }
+  } else {
+    document.getElementById('cultivoCultivo').value='';
+    document.getElementById('cultivoSemilla').value='';
+    document.getElementById('cultivoSuperficie').value='';
+    document.getElementById('cultivoFechaSiembra').value='';
+    document.getElementById('cultivoNotas').value='';
+  }
+  actualizarDisponible();
+  document.getElementById('modalCultivo').classList.add('open');
+}
+
+function editarLineaCultivo(lineaId) {
+  var d = null;
+  for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id===lineaId){d=declaraciones[i];break;} }
+  if(d) abrirModalCultivo(d.parcelaId, lineaId);
+}
+
+function actualizarDisponible() {
+  var parcelaId = document.getElementById('cultivoParcelaId').value;
+  var lineaId   = document.getElementById('cultivoLineaId').value;
+  var p = null;
+  for(var i=0;i<parcelas.length;i++) { if(parcelas[i].id===parcelaId){p=parcelas[i];break;} }
+  if(!p) return;
+  var total = parseFloat(p.superficie)||0;
+  var usadaSinEsta = 0;
+  for(var i=0;i<declaraciones.length;i++) {
+    var d=declaraciones[i];
+    if(d.parcelaId===parcelaId && d.campana===campanaActual && d.id!==lineaId) usadaSinEsta += parseFloat(d.superficie)||0;
+  }
+  var disponible = total-usadaSinEsta;
+  var ingresada  = parseFloat(document.getElementById('cultivoSuperficie').value)||0;
+  var excede = ingresada > disponible+0.001;
+  document.getElementById('disponibleVal').textContent = disponible.toFixed(2)+' ha';
+  document.getElementById('disponibleUsado').textContent = usadaSinEsta.toFixed(2)+' ha usadas';
+  document.getElementById('disponibleTotal').textContent = total.toFixed(2)+' ha total';
+  document.getElementById('disponibleBox').className = 'disponible-box'+(excede?' error':(disponible<total*0.1+0.01?' warn':''));
+  var btn = document.getElementById('btnGuardarCultivo');
+  btn.disabled = excede; btn.textContent = excede?'Superficie excedida':'Guardar';
+}
+
+function guardarLineaCultivo() {
+  var parcelaId = document.getElementById('cultivoParcelaId').value;
+  var lineaId   = document.getElementById('cultivoLineaId').value;
+  var cultivo   = document.getElementById('cultivoCultivo').value.trim();
+  var superfStr = document.getElementById('cultivoSuperficie').value;
+  if(!cultivo) { toast('El cultivo es obligatorio',true); return; }
+  if(!superfStr||isNaN(superfStr)||parseFloat(superfStr)<=0) { toast('Indica una superficie valida',true); return; }
+  var superficie = parseFloat(superfStr);
+  var p = null;
+  for(var i=0;i<parcelas.length;i++) { if(parcelas[i].id===parcelaId){p=parcelas[i];break;} }
+  var total = parseFloat(p?p.superficie:0)||0;
+  var usadaSinEsta = 0;
+  for(var i=0;i<declaraciones.length;i++) {
+    var d=declaraciones[i];
+    if(d.parcelaId===parcelaId && d.campana===campanaActual && d.id!==lineaId) usadaSinEsta+=parseFloat(d.superficie)||0;
+  }
+  if(superficie>total-usadaSinEsta+0.001) { toast('La superficie supera el disponible',true); return; }
+  var obj = {
+    id: lineaId || (Date.now().toString()+Math.random().toString(36).slice(2)),
+    parcelaId: parcelaId, campana: campanaActual, cultivo: cultivo,
+    semilla: document.getElementById('cultivoSemilla').value,
+    superficie: superficie,
+    fechaSiembra: document.getElementById('cultivoFechaSiembra').value,
+    notas: document.getElementById('cultivoNotas').value.trim()
+  };
+  var idx = -1;
+  for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id===obj.id){idx=i;break;} }
+  if(idx>=0) declaraciones[idx]=obj; else declaraciones.push(obj);
+  save(); cerrarModal('modalCultivo'); renderPAC();
+  toast(lineaId?'Cultivo actualizado':'Cultivo declarado');
+}
+
+function eliminarLineaCultivo(lineaId) {
+  if(!confirm('Eliminar esta linea de cultivo?')) return;
+  var nuevas = [];
+  for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id!==lineaId) nuevas.push(declaraciones[i]); }
+  declaraciones = nuevas;
+  save(); renderPAC(); toast('Linea eliminada');
+}
+
+function setFiltro(v) {
+  filtroActual = v;
+  var chips = document.querySelectorAll('.filter-chip');
+  for(var i=0;i<chips.length;i++) chips[i].classList.remove('active');
+  var opts = ['todos','R','S'];
+  for(var i=0;i<opts.length;i++) { if(opts[i]===v) chips[i].classList.add('active'); }
+  renderParcelas();
+}
+
+function renderParcelas() {
+  var q = document.getElementById('searchParcela').value.toLowerCase();
+  var ps = [];
+  for(var i=0;i<parcelas.length;i++) {
+    var p=parcelas[i];
+    if(filtroActual!=='todos' && p.regadio!==filtroActual) continue;
+    if(q && (p.nombre||'').toLowerCase().indexOf(q)<0 && (p.municipio||'').toLowerCase().indexOf(q)<0 && (p.refSIGPAC||'').toLowerCase().indexOf(q)<0) continue;
+    ps.push(p);
+  }
+  var cont = document.getElementById('listaParcelas');
+  if(!ps.length) {
+    cont.innerHTML='<div class="empty"><div class="empty-icon">&#128506;</div><div class="empty-text">Sin parcelas'+(q?' con ese nombre':'. Pulsa + para a&#241;adir')+'</div></div>';
+    return;
+  }
+  var html='';
+  for(var i=0;i<ps.length;i++) {
+    var p=ps[i];
+    html += '<div class="card">' +
+      '<div class="card-header"><div style="flex:1;min-width:0">' +
+      '<div class="card-title">'+p.nombre+'</div>' +
+      (p.refSIGPAC?'<div class="sigpac-ref">'+p.refSIGPAC+'</div>':'') +
+      ((p.poligono||p.parcela)?'<div class="poligono-info">Pol. '+(p.poligono||'-')+' Parc. '+(p.parcela||'-')+' Rec. '+(p.recinto||'-')+'</div>':'') +
+      '</div><div style="text-align:right;flex-shrink:0;margin-left:10px">' +
+      '<div style="font-size:18px;font-weight:800;color:var(--tierra)">'+(p.superficie||'-')+' ha</div>' +
+      '<div style="font-size:11px;color:#aaa">'+(p.municipio||'')+'</div></div></div>' +
+      '<div class="card-badges">' +
+      (p.regadio==='R'?'<span class="badge regadio">Regad&#237;o</span>':p.regadio==='S'?'<span class="badge secano">Secano</span>':'') +
+      '</div><div class="card-actions">' +
+      '<button class="btn-sm btn-edit parc-btn-editar" data-id="'+p.id+'">&#9998; Editar</button>' +
+      '<button class="btn-sm btn-del parc-btn-borrar" data-id="'+p.id+'">&#128465; Eliminar</button>' +
+      (p.refSIGPAC?'<button class="btn-sm parc-btn-sigpac" data-id="'+p.id+'" style="background:var(--azul-claro);color:var(--azul)">&#128506; SIGPAC</button>':'') +
+      '</div></div>';
+  }
+  cont.innerHTML = html;
+
+  cont.querySelectorAll('.parc-btn-editar').forEach(function(el){
+    el.addEventListener('click', function(){ editarParcela(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.parc-btn-borrar').forEach(function(el){
+    el.addEventListener('click', function(){ eliminarParcela(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
+    el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
+  });
+}
+
+
+function abrirModalNuevaParcela() {
+  document.getElementById('parcelaId').value='';
+  document.getElementById('modalParcelaTitle').textContent='Nueva parcela';
+  var ids=['parcelaNombre','parcelaRef','parcelaRefSIGPAC','parcelaMunicipio','parcelaProvincia','parcelaNotas'];
+  for(var i=0;i<ids.length;i++) document.getElementById(ids[i]).value='';
+  var nums=['parcelaSuperficie','parcelaPoligono','parcelaParcela','parcelaRecinto'];
+  for(var i=0;i<nums.length;i++) document.getElementById(nums[i]).value='';
+  document.getElementById('parcelaRegadio').value='';
+  document.getElementById('modalParcela').classList.add('open');
+}
+
+function editarParcela(id) {
+  var p=null;
+  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===id){p=parcelas[i];break;}}
+  if(!p) return;
+  document.getElementById('parcelaId').value=p.id;
+  document.getElementById('modalParcelaTitle').textContent='Editar parcela';
+  document.getElementById('parcelaNombre').value=p.nombre||'';
+  document.getElementById('parcelaRef').value=p.refCatastral||'';
+  document.getElementById('parcelaRefSIGPAC').value=p.refSIGPAC||'';
+  document.getElementById('parcelaPoligono').value=p.poligono||'';
+  document.getElementById('parcelaParcela').value=p.parcela||'';
+  document.getElementById('parcelaRecinto').value=p.recinto||'';
+  document.getElementById('parcelaSuperficie').value=p.superficie||'';
+  document.getElementById('parcelaRegadio').value=p.regadio||'';
+  document.getElementById('parcelaMunicipio').value=p.municipio||'';
+  document.getElementById('parcelaProvincia').value=p.provincia||'';
+  document.getElementById('parcelaNotas').value=p.notas||'';
+  document.getElementById('modalParcela').classList.add('open');
+}
+
+function guardarParcela() {
+  var nombre=document.getElementById('parcelaNombre').value.trim();
+  var superficie=document.getElementById('parcelaSuperficie').value;
+  if(!nombre){toast('El nombre es obligatorio',true);return;}
+  if(!superficie||isNaN(superficie)){toast('La superficie debe ser un numero',true);return;}
+  var id=document.getElementById('parcelaId').value||Date.now().toString();
+  var p={id:id,nombre:nombre,refCatastral:document.getElementById('parcelaRef').value.trim(),
+    refSIGPAC:document.getElementById('parcelaRefSIGPAC').value.trim(),
+    poligono:document.getElementById('parcelaPoligono').value.trim(),
+    parcela:document.getElementById('parcelaParcela').value.trim(),
+    recinto:document.getElementById('parcelaRecinto').value.trim(),
+    superficie:parseFloat(superficie),
+    regadio:document.getElementById('parcelaRegadio').value,
+    municipio:document.getElementById('parcelaMunicipio').value.trim(),
+    provincia:document.getElementById('parcelaProvincia').value.trim(),
+    notas:document.getElementById('parcelaNotas').value.trim()};
+  var idx=-1;
+  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===id){idx=i;break;}}
+  if(idx>=0) parcelas[idx]=p; else parcelas.push(p);
+  save(); cerrarModal('modalParcela'); renderParcelas();
+  toast(idx>=0?'Parcela actualizada':'Parcela anadida');
+}
+
+function eliminarParcela(id) {
+  if(!confirm('Eliminar esta parcela y sus cultivos?')) return;
+  var np=[],nd=[];
+  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id!==id)np.push(parcelas[i]);}
+  for(var i=0;i<declaraciones.length;i++){if(declaraciones[i].parcelaId!==id)nd.push(declaraciones[i]);}
+  parcelas=np; declaraciones=nd;
+  save(); renderParcelas(); toast('Parcela eliminada');
+}
+
+function abrirSIGPAC(parcelaId) {
+  var p=null;
+  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===parcelaId){p=parcelas[i];break;}}
+  if(!p) return;
+  var url='https://sigpac.mapa.gob.es/fega/visor/';
+  if(p.refSIGPAC) {
+    var parts=p.refSIGPAC.split('-');
+    if(parts.length>=6) url='https://sigpac.mapa.gob.es/fega/visor/?cp='+parts[0]+'&cm='+parts[1]+'&agr='+(parts[2]||0)+'&zona='+(parts[3]||0)+'&pol='+parts[4]+'&par='+parts[5]+'&rec='+(parts[6]||1);
+  }
+  window.open(url,'_blank');
+}
+
+var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
+function renderSemillas() {
+  var cont=document.getElementById('listaSemillas');
+  if(!semillas.length){cont.innerHTML='<div style="text-align:center;padding:20px;color:#aaa">Sin semillas anadidas</div>';return;}
+  var html='';
+  for(var i=0;i<semillas.length;i++){
+    var s=semillas[i];
+    html+='<div class="semilla-item"><div class="semilla-icon">&#127807;</div><div><div class="semilla-name">'+s.nombre+'</div><div class="semilla-sub">'+(s.tipo||'')+(s.variedad?' - '+s.variedad:'')+'</div></div><button class="semilla-del" onclick="eliminarSemilla('+s.id+')">X</button></div>';
+  }
+  cont.innerHTML=html;
+}
+
+function agregarSemilla() {
+  var nombre=document.getElementById('nuevaSemillaNombre').value.trim();
+  if(!nombre){toast('El nombre es obligatorio',true);return;}
+  for(var i=0;i<semillas.length;i++){if(semillas[i].nombre.toLowerCase()===nombre.toLowerCase()){toast('Semilla ya existe',true);return;}}
+  semillas.push({id:Date.now(),nombre:nombre,tipo:document.getElementById('nuevaSemillaTipo').value.trim(),variedad:document.getElementById('nuevaSemillaVariedad').value.trim()});
+  document.getElementById('nuevaSemillaNombre').value='';
+  document.getElementById('nuevaSemillaTipo').value='';
+  document.getElementById('nuevaSemillaVariedad').value='';
+  save();renderSemillas();toast('Semilla anadida');
+}
+
+function eliminarSemilla(id) {
+  if(!confirm('Eliminar esta semilla?')) return;
+  var ns=[];
+  for(var i=0;i<semillas.length;i++){if(semillas[i].id!==id)ns.push(semillas[i]);}
+  semillas=ns; save(); renderSemillas(); toast('Semilla eliminada');
+}
+
+function setImportMode(mode) {
+  document.getElementById('importSIGPAC').style.display=mode==='sigpac'?'':'none';
+  document.getElementById('importCustom').style.display=mode==='custom'?'':'none';
+  document.getElementById('modeTabSIGPAC').classList.toggle('active',mode==='sigpac');
+  document.getElementById('modeTabCustom').classList.toggle('active',mode==='custom');
+}
+
+function normHeader(h){
+  return String(h||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
+}
+
+var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','referencia':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
+var CUSTOM_MAP={'nombre':'nombre','referencia catastral':'refCatastral','ref catastral':'refCatastral','superficie':'superficie','superficie (ha)':'superficie','ha':'superficie','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas'};
+
+function parseSurface(v){if(v===undefined||v===null||v==='')return 0;return parseFloat(String(v).replace(',','.'))||0;}
+
+function importarExcel(event,mode) {
+  var file=event.target.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:'binary',cellDates:true});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+    if(rows.length<2){toast('Excel vacio o sin datos',true);return;}
+    var headers=rows[0];
+    var normHeaders=[];
+    for(var i=0;i<headers.length;i++) normHeaders.push(normHeader(headers[i]));
+    var data=[];
+    for(var i=1;i<rows.length;i++){
+      var row=rows[i]; var hasData=false;
+      for(var j=0;j<row.length;j++){if(row[j]!==undefined&&row[j]!==''){hasData=true;break;}}
+      if(hasData) data.push(row);
+    }
+    var colMap=mode==='sigpac'?SIGPAC_MAP:CUSTOM_MAP;
+    var preview=[];
+    for(var i=0;i<data.length;i++){
+      var row=data[i]; var obj={};
+      for(var j=0;j<normHeaders.length;j++){
+        var key=colMap[normHeaders[j]];
+        if(key){
+          var val=String(row[j]!==undefined?row[j]:'').trim();
+          if(key==='superficie') val=parseSurface(row[j]);
+          if(key==='regadio') val=val.toUpperCase().charAt(0);
+          obj[key]=val;
+        }
+      }
+      if(obj.nombre||obj.refSIGPAC) preview.push(obj);
+    }
+    if(mode==='sigpac'){
+      importPreviewSIGPAC=preview;
+      renderPreviewExcel(headers,data,'SIGPAC');
+      document.getElementById('previewCountSIGPAC').textContent=preview.length;
+      document.getElementById('previewContainerSIGPAC').style.display='block';
+    } else {
+      importPreviewCustom=preview;
+      renderPreviewExcel(headers,data,'Custom');
+      document.getElementById('previewCountCustom').textContent=preview.length;
+      document.getElementById('previewContainerCustom').style.display='block';
+    }
+    toast(preview.length+' parcelas detectadas');
+  };
+  reader.readAsBinaryString(file);
+}
+
+function renderPreviewExcel(headers,data,suffix){
+  var table=document.getElementById('previewTable'+suffix);
+  var html='<thead><tr>';
+  for(var i=0;i<headers.length;i++) html+='<th>'+headers[i]+'</th>';
+  html+='</tr></thead><tbody>';
+  for(var i=0;i<Math.min(5,data.length);i++){
+    html+='<tr>';
+    for(var j=0;j<headers.length;j++) html+='<td>'+(data[i][j]||'')+'</td>';
+    html+='</tr>';
+  }
+  html+='</tbody>';
+  table.innerHTML=html;
+}
+
+function confirmarImportacion(mode) {
+  var preview=mode==='sigpac'?importPreviewSIGPAC:importPreviewCustom;
+  if(!preview.length) return;
+  for(var i=0;i<preview.length;i++){
+    preview[i].id=Date.now().toString()+Math.random().toString(36).slice(2);
+    parcelas.push(preview[i]);
+  }
+  save();
+  if(mode==='sigpac'){document.getElementById('previewContainerSIGPAC').style.display='none';document.getElementById('fileInputSIGPAC').value='';importPreviewSIGPAC=[];}
+  else{document.getElementById('previewContainerCustom').style.display='none';document.getElementById('fileInputCustom').value='';importPreviewCustom=[];}
+  toast(preview.length+' parcelas importadas');
+  showPage('pac');
+}
+
+function cancelarImportacion(mode) {
+  if(mode==='sigpac'){importPreviewSIGPAC=[];document.getElementById('previewContainerSIGPAC').style.display='none';document.getElementById('fileInputSIGPAC').value='';}
+  else{importPreviewCustom=[];document.getElementById('previewContainerCustom').style.display='none';document.getElementById('fileInputCustom').value='';}
+}
+
+function exportarExcel() {
+  if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
+  var datos=[];
+  for(var i=0;i<parcelas.length;i++){
+    var p=parcelas[i];
+    var lineas=[];
+    for(var j=0;j<declaraciones.length;j++){if(declaraciones[j].parcelaId===p.id&&declaraciones[j].campana===campanaActual)lineas.push(declaraciones[j]);}
+    var base={'Ref SIGPAC':p.refSIGPAC||'','Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Nombre':p.nombre||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campanaActual};
+    if(lineas.length){for(var j=0;j<lineas.length;j++){var d=lineas[j];var row={};for(var k in base)row[k]=base[k];row['Cultivo']=d.cultivo;row['Semilla']=d.semilla||'';row['Sup Declarada']=d.superficie||'';row['Fecha Siembra']=d.fechaSiembra||'';row['Notas']=d.notas||'';datos.push(row);}}
+    else{var row={};for(var k in base)row[k]=base[k];row['Cultivo']='';row['Semilla']='';row['Sup Declarada']='';row['Fecha Siembra']='';row['Notas']='';datos.push(row);}
+  }
+  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
+  XLSX.utils.book_append_sheet(wb,ws,'PAC '+campanaActual);
+  XLSX.writeFile(wb,'PAC_'+usuarioActual.nombre+'_'+campanaActual+'.xlsx');
+  toast('Excel exportado');
+}
+
+function descargarPlantilla(mode) {
+  var datos,nombre;
+  if(mode==='sigpac'){datos=[{'Referencia SIGPAC':'9-403-0-0-501-15-1','Poligono':501,'Parcela':15,'Recinto':1,'Superficie TOTAL':'0,95','REGADIO / SECANO':'S','NOMBRE PARCELA':'VINA 1','POBLACION':'Tortoles de Esgueva'}];nombre='PAC_Plantilla_SIGPAC.xlsx';}
+  else{datos=[{'Nombre':'El Cerro','Referencia Catastral':'14001A00100001','Superficie (ha)':5.5,'Municipio':'Cordoba','Provincia':'Cordoba','Notas':''}];nombre='PAC_Plantilla.xlsx';}
+  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
+  XLSX.utils.book_append_sheet(wb,ws,'Parcelas');
+  XLSX.writeFile(wb,nombre);
+  toast('Plantilla descargada');
+}
+
+function hacerCopia() {
+  var datos={version:1,fecha:new Date().toISOString(),usuario:usuarioActual.nombre,campanaActual:campanaActual,campanas:campanas,parcelas:parcelas,semillas:semillas,declaraciones:declaraciones};
+  var blob=new Blob([JSON.stringify(datos,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='PAC_'+usuarioActual.nombre+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  URL.revokeObjectURL(url);toast('Copia descargada');
+}
+
+function restaurarCopia(event) {
+  var file=event.target.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var datos=JSON.parse(e.target.result);
+      if(!datos.parcelas||!datos.campanas){toast('Archivo no valido',true);return;}
+      if(!confirm('Restaurar copia del '+(datos.fecha?datos.fecha.slice(0,10):'archivo')+'? Se reemplazaran todos tus datos.')) return;
+      campanaActual=datos.campanaActual||'';campanas=datos.campanas||[];parcelas=datos.parcelas||[];semillas=datos.semillas||[];declaraciones=datos.declaraciones||[];
+      save();renderCampanas();renderPAC();toast('Datos restaurados');
+    }catch(err){toast('Error al leer el archivo',true);}
+  };
+  reader.readAsText(file);event.target.value='';
+}
+
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open');});
+});
+
+function bindModalEvents() {
+  // Modal cultivo
+  var btnG = document.getElementById('btnGuardarCultivo');
+  if(btnG) btnG.onclick = function(){ guardarLineaCultivo(); };
+  var btnCC = document.getElementById('btnCancelarCultivo');
+  if(btnCC) btnCC.onclick = function(){ cerrarModal('modalCultivo'); };
+  var supEl = document.getElementById('cultivoSuperficie');
+  if(supEl) supEl.oninput = function(){ actualizarDisponible(); };
+
+  // Modal parcela
+  var btnGP = document.getElementById('btnGuardarParcela');
+  if(btnGP) btnGP.onclick = function(){ guardarParcela(); };
+  var btnCP = document.getElementById('btnCancelarParcela');
+  if(btnCP) btnCP.onclick = function(){ cerrarModal('modalParcela'); };
+
+  // Modal campana
+  var btnGCamp = document.getElementById('btnConfirmarCampana');
+  if(btnGCamp) btnGCamp.onclick = function(){ confirmarNuevaCampana(); };
+  var btnCCamp = document.getElementById('btnCancelarCampana');
+  if(btnCCamp) btnCCamp.onclick = function(){ cerrarModal('modalCampana'); };
+  var inputCamp = document.getElementById('inputNuevaCampana');
+  if(inputCamp) inputCamp.onkeydown = function(e){ if(e.key==='Enter') confirmarNuevaCampana(); };
+
+  // Modal perfil
+  var btnCS = document.getElementById('btnCerrarSesion');
+  if(btnCS) btnCS.onclick = function(){ cerrarSesionConfirm(); };
+  var btnCPer = document.getElementById('btnCancelarPerfil');
+  if(btnCPer) btnCPer.onclick = function(){ cerrarModal('modalPerfil'); };
+
+  // Campana bar
+  var sel = document.getElementById('selectCampana');
+  if(sel) sel.onchange = function(){ cambiarCampana(); };
+  var btnNC = document.getElementById('btnNuevaCampana');
+  if(btnNC) btnNC.onclick = function(){ nuevaCampana(); };
+}
+
+function toast(msg,isError){
+  var t=document.getElementById('toast');
+  t.textContent=(isError?'! ':'')+msg;
+  t.style.background=isError?'#c0392b':'#222';
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2500);
+}
+
+renderLoginUsers();
+var lastId=DB.get('pac_lastUser',null);
+if(lastId){ entrarApp(lastId); }
+</script>
+</body>
+</html>
