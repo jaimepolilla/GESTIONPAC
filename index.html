@@ -216,9 +216,9 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
   <div><h1>PAC Gestion</h1><small id="headerCampana"></small></div>
   <div class="header-right">
-    <button class="btn-header" onclick="exportarExcel()">Excel</button>
-    <button class="btn-header" onclick="hacerCopia()">Copia</button>
-    <button class="btn-header" onclick="document.getElementById('fileInputRestore').click()">Restaurar</button>
+    <button class="btn-header" id="btnExcel">Excel</button>
+    <button class="btn-header" id="btnCopia">Copia</button>
+    <button class="btn-header" id="btnRestaurar">Restaurar</button>
     <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
   </div>
 </header>
@@ -1170,16 +1170,12 @@ function cancelarImportacion(mode) {
 }
 
 function exportarExcel() {
-  if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
   if(!campanas.length){toast('No hay campañas creadas',true);return;}
-  // Show campaign selector modal
   var list = document.getElementById('exportCampanaList');
   var html = '';
   for(var i=0;i<campanas.length;i++){
     var c = campanas[i];
-    // Count declaraciones for this campaign
-    var nDecl = 0;
-    var haDecl = 0;
+    var nDecl=0, haDecl=0;
     for(var j=0;j<declaraciones.length;j++){
       if(declaraciones[j].campana===c){
         nDecl++;
@@ -1187,10 +1183,9 @@ function exportarExcel() {
       }
     }
     html += '<button class="export-campana-btn" data-campana="'+c+'" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--verde-fondo);border:1.5px solid var(--borde);border-radius:10px;padding:14px 16px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;">' +
-      '<div style="text-align:left"><div style="font-size:17px;font-weight:800;color:var(--verde)">Campaña '+c+'</div>' +
-      '<div style="font-size:12px;color:#888;margin-top:3px">'+nDecl+' cultivos · '+haDecl.toFixed(2)+' ha declaradas</div></div>' +
-      '<div style="font-size:22px;color:var(--verde)">&#128229;</div>' +
-      '</button>';
+      '<div style="text-align:left"><div style="font-size:17px;font-weight:800;color:var(--verde)">Campa&#241;a '+c+'</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:3px">'+nDecl+' cultivos declarados · '+haDecl.toFixed(2)+' ha</div></div>' +
+      '<div style="font-size:22px;color:var(--verde)">&#128229;</div></button>';
   }
   list.innerHTML = html;
   list.querySelectorAll('.export-campana-btn').forEach(function(btn){
@@ -1201,21 +1196,6 @@ function exportarExcel() {
     });
   });
   document.getElementById('modalExportar').classList.add('open');
-  return; // stop here, actual export called from modal
-  if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
-  var datos=[];
-  for(var i=0;i<parcelas.length;i++){
-    var p=parcelas[i];
-    var lineas=[];
-    for(var j=0;j<declaraciones.length;j++){if(declaraciones[j].parcelaId===p.id&&declaraciones[j].campana===campanaActual)lineas.push(declaraciones[j]);}
-    var base={'Ref SIGPAC':p.refSIGPAC||'','Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Nombre':p.nombre||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campanaActual};
-    if(lineas.length){for(var j=0;j<lineas.length;j++){var d=lineas[j];var row={};for(var k in base)row[k]=base[k];row['Cultivo']=d.cultivo;row['Semilla']=d.semilla||'';row['Sup Declarada']=d.superficie||'';row['Fecha Siembra']=d.fechaSiembra||'';row['Notas']=d.notas||'';datos.push(row);}}
-    else{var row={};for(var k in base)row[k]=base[k];row['Cultivo']='';row['Semilla']='';row['Sup Declarada']='';row['Fecha Siembra']='';row['Notas']='';datos.push(row);}
-  }
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
-  XLSX.utils.book_append_sheet(wb,ws,'PAC '+campanaActual);
-  XLSX.writeFile(wb,'PAC_'+usuarioActual.nombre+'_'+campanaActual+'.xlsx');
-  toast('Excel exportado');
 }
 
 function exportarExcelCampana(campana) {
@@ -1289,15 +1269,20 @@ function restaurarCopia(event) {
   var file=event.target.files[0]; if(!file) return;
   var reader=new FileReader();
   reader.onload=function(e){
-    try{
-      var datos=JSON.parse(e.target.result);
-      if(!datos.parcelas||!datos.campanas){toast('Archivo no valido',true);return;}
-      if(!confirm('Restaurar copia del '+(datos.fecha?datos.fecha.slice(0,10):'archivo')+'? Se reemplazaran todos tus datos.')) return;
-      campanaActual=datos.campanaActual||'';campanas=datos.campanas||[];parcelas=datos.parcelas||[];semillas=datos.semillas||[];declaraciones=datos.declaraciones||[];
-      save();renderCampanas();renderPAC();toast('Datos restaurados');
-    }catch(err){toast('Error al leer el archivo',true);}
+    var datos;
+    try{ datos=JSON.parse(e.target.result); }
+    catch(ex){ toast('Error al leer el archivo',true); return; }
+    if(!datos.parcelas||!datos.campanas){ toast('Archivo no valido',true); return; }
+    var fecha = datos.fecha ? datos.fecha.slice(0,10) : 'archivo';
+    if(!confirm('Restaurar copia del '+fecha+'? Se reemplazaran todos tus datos.')) return;
+    campanaActual=datos.campanaActual||'';
+    campanas=datos.campanas||[];
+    parcelas=datos.parcelas||[];
+    semillas=datos.semillas||[];
+    declaraciones=datos.declaraciones||[];
+    save(); renderCampanas(); renderPAC(); toast('Datos restaurados');
   };
-  reader.readAsText(file);event.target.value='';
+  reader.readAsText(file); event.target.value='';
 }
 
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
@@ -1333,6 +1318,14 @@ function bindModalEvents() {
   if(btnCS) btnCS.onclick = function(){ cerrarSesionConfirm(); };
   var btnCPer = document.getElementById('btnCancelarPerfil');
   if(btnCPer) btnCPer.onclick = function(){ cerrarModal('modalPerfil'); };
+
+  // Header buttons
+  var btnEx = document.getElementById('btnExcel');
+  if(btnEx) btnEx.addEventListener('click', function(){ exportarExcel(); });
+  var btnCop = document.getElementById('btnCopia');
+  if(btnCop) btnCop.addEventListener('click', function(){ hacerCopia(); });
+  var btnRes = document.getElementById('btnRestaurar');
+  if(btnRes) btnRes.addEventListener('click', function(){ document.getElementById('fileInputRestore').click(); });
 
   // Modal exportar
   var btnCE = document.getElementById('btnCerrarExportar');
