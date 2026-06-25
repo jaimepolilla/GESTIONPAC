@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3d6b2f">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjM2Q2YjJmIi8+PHRleHQgeD0iNTAiIHk9IjcyIiBmb250LXNpemU9IjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2VyaWYiPiYjMTI3ODA2OzwvdGV4dD48L3N2Zz4=">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjIwIiBmaWxsPSIjM2Q2YjJmIi8+PHRleHQgeD0iNTAiIHk9IjcyIiBmb250LXNpemU9IjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2VyaWYiPiYjMTI3ODA2OzwvdGV4dD48L3N2Zz4=">
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUEFDIEdlc3Rpb24iLCJzaG9ydF9uYW1lIjoiUEFDIiwiZGVzY3JpcHRpb24iOiJHZXN0aW9uIGRlIHBhcmNlbGFzIFBBQyIsInN0YXJ0X3VybCI6Ii4vIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI2VkZjNlYSIsInRoZW1lX2NvbG9yIjoiIzNkNmIyZiIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBeE1EQWdNVEF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlNVEF3SWlCb1pXbG5hSFE5SWpFd01DSWdjbmc5SWpJd0lpQm1hV3hzUFNJak0yUTJZakptSWk4K1BIUmxlSFFnZUQwaU5UQWlJSGs5SWpjeUlpQm1iMjUwTFhOcGVtVTlJall3SWlCMFpYaDBMV0Z1WTJodmNqMGliV2xrWkd4bElpQm1iMjUwTFdaaGJXbHNlVDBpYzJWeWFXWWlQaVlqTVRJM09EQTJPend2ZEdWNGRENDhMM04yWno0PSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn0seyJzcmMiOiJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBeE1EQWdNVEF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlNVEF3SWlCb1pXbG5hSFE5SWpFd01DSWdjbmc5SWpJd0lpQm1hV3hzUFNJak0yUTJZakptSWk4K1BIUmxlSFFnZUQwaU5UQWlJSGs5SWpjeUlpQm1iMjUwTFhOcGVtVTlJall3SWlCMFpYaDBMV0Z1WTJodmNqMGliV2xrWkd4bElpQm1iMjUwTFdaaGJXbHNlVDBpYzJWeWFXWWlQaVlqTVRJM09EQTJPend2ZEdWNGRENDhMM04yWno0PSIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -83,6 +86,8 @@ header small{font-size:11px;opacity:0.8;display:block;}
 .pac-cultivo-semilla{font-size:12px;color:#888;}
 .pac-cultivo-ha{font-size:14px;font-weight:700;color:var(--tierra);white-space:nowrap;}
 .pac-cultivo-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:4px;}
+.tipo-siembra-btn.activo{background:var(--verde-fondo);border-color:var(--verde);color:var(--verde);}
+.tipo-siembra-btn:active{background:var(--verde-fondo);}
 .pac-add-btn{margin:6px 16px 14px;width:calc(100% - 32px);padding:14px 10px;background:var(--verde-fondo);color:var(--verde);border:1.5px dashed var(--borde);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;display:block;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .pac-sin-cultivo{padding:10px 16px 14px;font-size:13px;color:#aaa;font-style:italic;border-top:1px solid var(--borde);}
 .semilla-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde);}
@@ -150,10 +155,10 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 .campana-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .campana-bar select{flex:1;padding:10px 12px;font-size:14px;}
 .campana-btn{
-  padding:10px 20px;border-radius:20px;border:2px solid var(--borde);
-  background:var(--blanco);color:var(--gris);font-size:15px;font-weight:700;
+  padding:10px 18px;border-radius:14px;border:2px solid var(--borde);
+  background:var(--blanco);color:var(--gris);
   cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-  transition:all 0.2s;
+  transition:all 0.2s;text-align:center;line-height:1.2;
 }
 .campana-btn-activa{
   background:var(--verde);color:white;border-color:var(--verde);
@@ -227,22 +232,25 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <!-- HEADER -->
 <header id="appHeader" style="display:none">
   <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
-  <div><h1>PAC Gestion</h1><small id="headerCampana"></small></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div style="font-size:26px;line-height:1">&#127806;</div>
+    <div style="line-height:1.1">
+      <div style="font-size:11px;font-weight:600;opacity:0.85;letter-spacing:0.5px">Gestión</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px">PAC</div>
+      <small id="headerCampana" style="font-size:10px;opacity:0.75"></small>
+    </div>
+  </div>
   <div class="header-right">
-    <button class="btn-header" id="btnExcel">Excel</button>
-    <button class="btn-header" id="btnCopia">Copia</button>
-    <button class="btn-header" id="btnRestaurar">Restaurar</button>
     <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
   </div>
 </header>
 
 <!-- PAC -->
 <div id="page-pac" class="page">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-    <div style="font-size:13px;font-weight:600;color:#888">Campaña activa</div>
-    <button class="btn-nueva-campana" id="btnNuevaCampana">+ Campaña</button>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button id="btnVolverCampanas" style="display:none;background:var(--gris-claro);color:var(--gris);border:none;border-radius:20px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#8592; Campañas</button>
+    <div id="campanasBtns" style="display:flex;flex-wrap:wrap;gap:8px;flex:1"></div>
   </div>
-  <div id="campanasBtns" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
   <div class="stats-grid">
     <div class="stat-card"><div class="stat-num" id="statParcelas">-</div><div class="stat-label">Parcelas</div></div>
     <div class="stat-card tierra"><div class="stat-num" id="statHa">-</div><div class="stat-label">Ha totales</div></div>
@@ -255,7 +263,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 
 <!-- PARCELAS -->
 <div id="page-parcelas" class="page">
-  <div class="search-bar"><span>&#128269;</span><input type="text" id="searchParcela" placeholder="Buscar..." oninput="renderParcelas()"></div>
+  <div class="search-bar"><span>&#128269;</span><input type="text" id="searchParcela" placeholder="Buscar campo..." oninput="renderParcelas()"></div>
   <div class="filter-row">
     <div class="filter-chip active" onclick="setFiltro('todos')">Todas</div>
     <div class="filter-chip" onclick="setFiltro('R')">Regad&#237;o</div>
@@ -287,6 +295,8 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 
 <!-- IMPORTAR -->
 <div id="page-importar" class="page">
+  <div style="font-size:22px;font-weight:800;color:var(--verde);margin-bottom:16px">&#9881; Ajustes</div>
+
   <!-- EXPORTAR -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--verde)">
     <div style="display:flex;gap:10px;align-items:flex-start">
@@ -300,11 +310,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   </div>
 
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--azul)">
-    <div style="display:flex;gap:10px;align-items:flex-start">
-      <div style="font-size:22px">&#128260;</div>
-      <div><div style="font-size:14px;font-weight:700;color:var(--azul);margin-bottom:4px">Compartir entre dispositivos</div>
-      <div style="font-size:13px;color:#666">Usa <strong>Copia</strong> para guardar tus datos y <strong>Restaurar</strong> para cargarlos en otro dispositivo.</div></div>
+    <div style="font-size:15px;font-weight:700;color:var(--azul);margin-bottom:6px">&#128260; Compartir entre dispositivos</div>
+    <div style="font-size:13px;color:#666;margin-bottom:16px">
+      Crea un archivo de copia con todos tus datos y cárgalo en cualquier otro dispositivo para tener todo sincronizado.
     </div>
+    <button id="btnCopiaAjustes" style="width:100%;padding:14px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">
+      &#128190; Crear archivo de copia (.json)
+    </button>
+    <button id="btnRestaurarAjustes" style="width:100%;padding:14px;background:var(--azul-claro);color:var(--azul);border:1.5px solid #aed6f1;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">
+      &#128194; Cargar archivo de copia
+    </button>
   </div>
   <div class="import-mode-tabs">
     <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
@@ -332,7 +347,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     </div>
     <div class="card" style="margin-top:12px">
       <div class="card-title" style="margin-bottom:8px">Plantilla SIGPAC</div>
-      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('sigpac')">Descargar plantilla SIGPAC</button>
+      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('sigpac')">&#128229; Descargar plantilla de explotaci&#243;n (.xlsx)</button>
     </div>
   </div>
   <div id="importCustom" style="display:none">
@@ -417,6 +432,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <datalist id="cultivosSuggestions"></datalist>
     <label>Semilla / Variedad</label>
     <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    <label>Tipo de siembra</label>
+    <div style="display:flex;gap:10px;margin-bottom:4px">
+      <button class="tipo-siembra-btn" id="btnSiembraDirecta" data-val="directa" style="flex:1;padding:12px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">
+        &#127807; Siembra directa
+      </button>
+      <button class="tipo-siembra-btn" id="btnSiembraTradicional" data-val="tradicional" style="flex:1;padding:12px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;">
+        &#x1F69C; Tradicional
+      </button>
+    </div>
+    <input type="hidden" id="cultivoTipoSiembra" value="">
     <label>Superficie a declarar (ha) *</label>
     <input type="number" id="cultivoSuperficie" placeholder="0.00" step="0.01" min="0.01">
     <label>Fecha de siembra</label><input type="date" id="cultivoFechaSiembra">
@@ -465,13 +490,23 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   </div>
 </div>
 
+<!-- MODAL CONFIRMAR ELIMINAR -->
+<div class="modal-overlay" id="modalConfirmar">
+  <div class="modal" style="max-height:40vh">
+    <div class="modal-title"><span id="confirmarTitulo">Confirmar</span><button class="modal-close" onclick="cerrarModal('modalConfirmar')">X</button></div>
+    <div id="confirmarMensaje" style="font-size:15px;color:var(--gris);margin-bottom:20px"></div>
+    <button id="btnConfirmarSi" style="width:100%;padding:14px;background:var(--rojo);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">Eliminar</button>
+    <button class="btn-secondary" onclick="cerrarModal('modalConfirmar')">Cancelar</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <nav id="appNav" style="display:none">
-  <div class="nav-item active" onclick="showPage('pac')"><span>&#128203;</span>PAC</div>
-  <div class="nav-item" onclick="showPage('parcelas')"><span>&#128506;</span>Parcelas</div>
+  <div class="nav-item active" onclick="showPage('pac')"><span>&#128203;</span>Campa&#241;as</div>
+  <div class="nav-item" onclick="showPage('parcelas')"><span>&#128506;</span>Campos</div>
   <div class="nav-item" onclick="showPage('semillas')"><span>&#127807;</span>Semillas</div>
-  <div class="nav-item" onclick="showPage('importar')"><span>&#128229;</span>Importar</div>
+  <div class="nav-item" onclick="showPage('importar')"><span>&#9881;</span>Ajustes</div>
 </nav>
 
 <script>
@@ -672,32 +707,50 @@ function showPage(name) {
 function renderCampanas() {
   var cont = document.getElementById('campanasBtns');
   if(!cont) return;
+  var btnVolver = document.getElementById('btnVolverCampanas');
+
   if(!campanas.length) {
-    cont.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin campañas. Pulsa + para crear una.</div>';
+    cont.innerHTML = '';
     document.getElementById('headerCampana').textContent = '';
-    var btn = document.getElementById('btnNuevaCampana');
-    if(btn) btn.onclick = function(){ nuevaCampana(); };
+    if(btnVolver) btnVolver.style.display = 'none';
     return;
   }
-  var html = '';
-  for(var i=0;i<campanas.length;i++){
-    var c = campanas[i];
-    var activa = c === campanaActual;
-    html += '<button class="campana-btn' + (activa?' campana-btn-activa':'') + '" data-campana="'+c+'">' + c + '</button>';
+
+  if(campanaActual) {
+    // Dentro de una campaña: mostrar solo el botón activo + botón volver
+    var html = '<button class="campana-btn campana-btn-activa" data-campana="'+campanaActual+'"><span style="display:block;font-size:10px;font-weight:600;opacity:0.85;letter-spacing:0.5px;text-transform:uppercase">Campa&#241;a</span><span style="display:block;font-size:18px;font-weight:800;line-height:1.1">'+campanaActual+'</span></button>';
+    cont.innerHTML = html;
+    if(btnVolver) btnVolver.style.display = 'flex';
+    document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
+  } else {
+    // Sin campaña seleccionada: mostrar todos los botones
+    var html = '';
+    for(var i=0;i<campanas.length;i++){
+      html += '<button class="campana-btn" data-campana="'+campanas[i]+'"><span style="display:block;font-size:10px;font-weight:600;opacity:0.75;letter-spacing:0.5px;text-transform:uppercase">Campa&#241;a</span><span style="display:block;font-size:18px;font-weight:800;line-height:1.1">'+campanas[i]+'</span></button>';
+    }
+    cont.innerHTML = html;
+    if(btnVolver) btnVolver.style.display = 'none';
+    document.getElementById('headerCampana').textContent = '';
   }
-  cont.innerHTML = html;
-  cont.querySelectorAll('.campana-btn').forEach(function(btn){
+
+  cont.querySelectorAll('.campana-btn[data-campana]').forEach(function(btn){
     btn.addEventListener('click', function(){
       campanaActual = this.getAttribute('data-campana');
-      document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
       save();
       renderCampanas();
       renderPAC();
     });
   });
-  document.getElementById('headerCampana').textContent = 'Campaña ' + campanaActual;
-  var btn = document.getElementById('btnNuevaCampana');
-  if(btn) btn.onclick = function(){ nuevaCampana(); };
+
+  // Botón volver: deselecciona campaña y muestra todas
+  if(btnVolver) {
+    btnVolver.onclick = function(){
+      campanaActual = '';
+      save();
+      renderCampanas();
+      renderPAC();
+    };
+  }
 }
 
 
@@ -718,7 +771,7 @@ function confirmarNuevaCampana() {
   save();
   cerrarModal('modalCampana');
   renderCampanas();
-  renderPAC();
+  showPage('pac');
   toast('Campaña ' + c + ' creada');
 }
 
@@ -739,19 +792,22 @@ function colorCultivo(nombre) {
 
 function renderPAC() {
   var cont = document.getElementById('listaPAC');
+  // Hide/show stats grid depending on whether campaign is active
+  var statsGrid = document.querySelector('.stats-grid');
+  var searchBar = document.querySelector('#page-pac .search-bar');
   if(!campanaActual || !campanas.length) {
-    document.getElementById('statParcelas').textContent = '-';
-    document.getElementById('statHa').textContent = '-';
-    document.getElementById('statDeclaradas').textContent = '-';
-    document.getElementById('statPendientes').textContent = '-';
+    if(statsGrid) statsGrid.style.display = 'none';
+    if(searchBar) searchBar.style.display = 'none';
     cont.innerHTML = '<div class="empty"><div class="empty-icon">&#128203;</div>' +
       '<div class="empty-text" style="font-weight:700;color:var(--gris);margin-bottom:8px">Sin campa&#241;a activa</div>' +
-      '<div style="font-size:13px;color:#aaa;margin-bottom:20px">Crea una campa&#241;a para declarar cultivos</div>' +
-      '<button class="btn-crear-campana" style="background:var(--verde);color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer">+ Crear campa&#241;a</button></div>';
+      '<div style="font-size:13px;color:#aaa;margin-bottom:20px">Crea una campa&#241;a para empezar</div>' +
+      '<button class="btn-crear-campana" style="background:var(--verde);color:white;border:none;border-radius:10px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear campa&#241;a</button></div>';
     var btnC = cont.querySelector('.btn-crear-campana');
     if(btnC) btnC.addEventListener('click', function(){ nuevaCampana(); });
     return;
   }
+  if(statsGrid) statsGrid.style.display = '';
+  if(searchBar) searchBar.style.display = '';
   var q = document.getElementById('searchPAC').value.toLowerCase();
   var psFiltradas = [];
   for(var i=0;i<parcelas.length;i++) {
@@ -789,8 +845,9 @@ function renderPAC() {
         lineasHTML += '<div class="pac-cultivo-row">' +
           '<div class="pac-cultivo-dot" style="background:' + colorCultivo(d.cultivo) + '"></div>' +
           '<div style="flex:1;min-width:0"><div class="pac-cultivo-nombre">' + d.cultivo + '</div>' +
-          (d.semilla?'<div class="pac-cultivo-semilla">Semilla: '+d.semilla+'</div>':'') +
-          (d.fechaSiembra?'<div class="pac-cultivo-semilla">Siembra: '+d.fechaSiembra+'</div>':'') +
+          (d.semilla?'<div class="pac-cultivo-semilla">&#127807; '+d.semilla+'</div>':'') +
+          (d.tipoSiembra?'<div class="pac-cultivo-semilla">&#128652; '+( d.tipoSiembra==='directa'?'Siembra directa':'Tradicional')+'</div>':'') +
+          (d.fechaSiembra?'<div class="pac-cultivo-semilla">&#128197; '+d.fechaSiembra+'</div>':'') +
           '</div><div class="pac-cultivo-ha">' + parseFloat(d.superficie).toFixed(2) + ' ha</div>' +
           '<div style="display:flex;gap:4px">' +
           '<button class="pac-cultivo-btn pac-btn-editar" data-id="' + d.id + '">&#9998;</button>' +
@@ -866,6 +923,10 @@ function abrirModalCultivo(parcelaId, lineaId) {
       document.getElementById('cultivoSuperficie').value=d.superficie||'';
       document.getElementById('cultivoFechaSiembra').value=d.fechaSiembra||'';
       document.getElementById('cultivoNotas').value=d.notas||'';
+      document.getElementById('cultivoTipoSiembra').value=d.tipoSiembra||'';
+      document.querySelectorAll('.tipo-siembra-btn').forEach(function(b){
+        b.classList.toggle('activo', b.getAttribute('data-val')===(d.tipoSiembra||''));
+      });
     }
   } else {
     document.getElementById('cultivoCultivo').value='';
@@ -873,8 +934,24 @@ function abrirModalCultivo(parcelaId, lineaId) {
     document.getElementById('cultivoSuperficie').value='';
     document.getElementById('cultivoFechaSiembra').value='';
     document.getElementById('cultivoNotas').value='';
+    document.getElementById('cultivoTipoSiembra').value='';
+    document.querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
   }
   actualizarDisponible();
+  // Re-bind buttons every time modal opens (use onclick to avoid accumulation)
+  document.getElementById('btnGuardarCultivo').onclick = guardarLineaCultivo;
+  document.getElementById('btnCancelarCultivo').onclick = function(){ cerrarModal('modalCultivo'); };
+  var btnVolver = document.getElementById('btnVolverPAC');
+  if(btnVolver) btnVolver.onclick = function(){ cerrarModal('modalCultivo'); showPage('pac'); };
+  document.getElementById('cultivoSuperficie').oninput = actualizarDisponible;
+  // Tipo siembra buttons
+  document.querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
   document.getElementById('modalCultivo').classList.add('open');
 }
 
@@ -928,6 +1005,7 @@ function guardarLineaCultivo() {
     id: lineaId || (Date.now().toString()+Math.random().toString(36).slice(2)),
     parcelaId: parcelaId, campana: campanaActual, cultivo: cultivo,
     semilla: document.getElementById('cultivoSemilla').value,
+    tipoSiembra: document.getElementById('cultivoTipoSiembra').value,
     superficie: superficie,
     fechaSiembra: document.getElementById('cultivoFechaSiembra').value,
     notas: document.getElementById('cultivoNotas').value.trim()
@@ -940,11 +1018,12 @@ function guardarLineaCultivo() {
 }
 
 function eliminarLineaCultivo(lineaId) {
-  if(!confirm('Eliminar esta linea de cultivo?')) return;
+  mostrarConfirmacion('Eliminar cultivo', 'Se eliminará esta línea de cultivo declarado.', function(){
   var nuevas = [];
   for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id!==lineaId) nuevas.push(declaraciones[i]); }
   declaraciones = nuevas;
   save(); renderPAC(); toast('Linea eliminada');
+  });
 }
 
 var modoSeleccion = false;
@@ -1003,24 +1082,29 @@ function seleccionarTodas(checked) {
 function eliminarSeleccionadas() {
   var ids = Object.keys(parcelasSeleccionadas);
   if(!ids.length) return;
-  if(!confirm('Eliminar ' + ids.length + ' parcelas seleccionadas y sus cultivos?')) return;
-  var np = [], nd = [];
-  for(var i=0;i<parcelas.length;i++){
-    if(!parcelasSeleccionadas[parcelas[i].id]) np.push(parcelas[i]);
-  }
-  for(var i=0;i<declaraciones.length;i++){
-    if(!parcelasSeleccionadas[declaraciones[i].parcelaId]) nd.push(declaraciones[i]);
-  }
-  parcelas = np; declaraciones = nd;
-  parcelasSeleccionadas = {};
-  save();
-  modoSeleccion = false;
-  var chip = document.getElementById('chipSeleccionar');
-  if(chip) chip.classList.remove('active');
-  var barra = document.getElementById('barraSeleccion');
-  if(barra) barra.style.display = 'none';
-  renderParcelas();
-  toast('Parcelas eliminadas');
+  mostrarConfirmacion(
+    'Eliminar parcelas',
+    'Se eliminarán ' + ids.length + ' parcelas y todos sus cultivos declarados. Esta acción no se puede deshacer.',
+    function(){
+      var np = [], nd = [];
+      for(var i=0;i<parcelas.length;i++){
+        if(!parcelasSeleccionadas[parcelas[i].id]) np.push(parcelas[i]);
+      }
+      for(var i=0;i<declaraciones.length;i++){
+        if(!parcelasSeleccionadas[declaraciones[i].parcelaId]) nd.push(declaraciones[i]);
+      }
+      parcelas = np; declaraciones = nd;
+      parcelasSeleccionadas = {};
+      save();
+      modoSeleccion = false;
+      var chip = document.getElementById('chipSeleccionar');
+      if(chip) chip.classList.remove('active');
+      var barra = document.getElementById('barraSeleccion');
+      if(barra) barra.style.display = 'none';
+      renderParcelas();
+      toast('Parcelas eliminadas');
+    }
+  );
 }
 
 function setFiltro(v) {
@@ -1043,7 +1127,7 @@ function renderParcelas() {
   }
   var cont = document.getElementById('listaParcelas');
   if(!ps.length) {
-    cont.innerHTML='<div class="empty"><div class="empty-icon">&#128506;</div><div class="empty-text">Sin parcelas'+(q?' con ese nombre':'. Pulsa + para a&#241;adir')+'</div></div>';
+    cont.innerHTML='<div class="empty"><div class="empty-icon">&#128506;</div><div class="empty-text">Sin parcelas'+(q?' con ese nombre':'. Pulsa + para a&#241;adir campo')+'</div></div>';
     return;
   }
   var html='';
@@ -1102,6 +1186,8 @@ function abrirModalNuevaParcela() {
   var nums=['parcelaSuperficie','parcelaPoligono','parcelaParcela','parcelaRecinto'];
   for(var i=0;i<nums.length;i++) document.getElementById(nums[i]).value='';
   document.getElementById('parcelaRegadio').value='';
+  document.getElementById('btnGuardarParcela').onclick = guardarParcela;
+  document.getElementById('btnCancelarParcela').onclick = function(){ cerrarModal('modalParcela'); };
   document.getElementById('modalParcela').classList.add('open');
 }
 
@@ -1122,6 +1208,8 @@ function editarParcela(id) {
   document.getElementById('parcelaMunicipio').value=p.municipio||'';
   document.getElementById('parcelaProvincia').value=p.provincia||'';
   document.getElementById('parcelaNotas').value=p.notas||'';
+  document.getElementById('btnGuardarParcela').onclick = guardarParcela;
+  document.getElementById('btnCancelarParcela').onclick = function(){ cerrarModal('modalParcela'); };
   document.getElementById('modalParcela').classList.add('open');
 }
 
@@ -1149,12 +1237,13 @@ function guardarParcela() {
 }
 
 function eliminarParcela(id) {
-  if(!confirm('Eliminar esta parcela y sus cultivos?')) return;
+  mostrarConfirmacion('Eliminar parcela', 'Se eliminará esta parcela y todos sus cultivos declarados.', function(){
   var np=[],nd=[];
   for(var i=0;i<parcelas.length;i++){if(parcelas[i].id!==id)np.push(parcelas[i]);}
   for(var i=0;i<declaraciones.length;i++){if(declaraciones[i].parcelaId!==id)nd.push(declaraciones[i]);}
   parcelas=np; declaraciones=nd;
   save(); renderParcelas(); toast('Parcela eliminada');
+  });
 }
 
 function abrirSIGPAC(parcelaId) {
@@ -1193,10 +1282,11 @@ function agregarSemilla() {
 }
 
 function eliminarSemilla(id) {
-  if(!confirm('Eliminar esta semilla?')) return;
+  mostrarConfirmacion('Eliminar semilla', '¿Eliminar esta semilla?', function(){
   var ns=[];
   for(var i=0;i<semillas.length;i++){if(semillas[i].id!==id)ns.push(semillas[i]);}
   semillas=ns; save(); renderSemillas(); toast('Semilla eliminada');
+  });
 }
 
 function setImportMode(mode) {
@@ -1215,7 +1305,7 @@ function normHeader(h){
   return s;
 }
 
-var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','referncia sigpac':'refSIGPAC','ref sigpac':'refSIGPAC','referencia':'refSIGPAC','referncia':'refSIGPAC','ref. sigpac':'refSIGPAC','refsigpac':'refSIGPAC','rereferncia sigpac':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
+var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','rereferencia sigpac':'refSIGPAC','rereferncia sigpac':'refSIGPAC','referncia sigpac':'refSIGPAC','ref sigpac':'refSIGPAC','referencia':'refSIGPAC','referncia':'refSIGPAC','ref. sigpac':'refSIGPAC','refsigpac':'refSIGPAC','rereferencia':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
 var CUSTOM_MAP={'nombre':'nombre','referencia catastral':'refCatastral','ref catastral':'refCatastral','superficie':'superficie','superficie (ha)':'superficie','ha':'superficie','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas'};
 
 function parseSurface(v){if(v===undefined||v===null||v==='')return 0;return parseFloat(String(v).replace(',','.'))||0;}
@@ -1237,7 +1327,20 @@ function importarExcel(event,mode) {
       for(var j=0;j<row.length;j++){if(row[j]!==undefined&&row[j]!==''){hasData=true;break;}}
       if(hasData) data.push(row);
     }
-    var colMap=mode==='sigpac'?SIGPAC_MAP:CUSTOM_MAP;
+    // Copy colMap so we can add dynamic mappings
+    var baseMap = mode==='sigpac'?SIGPAC_MAP:CUSTOM_MAP;
+    var colMap = {};
+    for(var k in baseMap) colMap[k] = baseMap[k];
+    // Auto-fix: if a header contains 'sigpac' and isn't mapped, force it
+    for(var i=0;i<normHeaders.length;i++){
+      if(normHeaders[i].indexOf('sigpac')>=0 && !colMap[normHeaders[i]]) {
+        colMap[normHeaders[i]] = 'refSIGPAC';
+      }
+      // Auto-fix: superficie/surface variants
+      if((normHeaders[i].indexOf('superficie')>=0 || normHeaders[i].indexOf('surface')>=0 || normHeaders[i] === 'ha') && !colMap[normHeaders[i]]) {
+        colMap[normHeaders[i]] = 'superficie';
+      }
+    }
     var preview=[];
     for(var i=0;i<data.length;i++){
       var row=data[i]; var obj={};
@@ -1363,6 +1466,7 @@ function exportarExcelCampana(campana) {
         for(var k in base) row[k]=base[k];
         row['Cultivo']=d.cultivo||'';
         row['Semilla']=d.semilla||'';
+        row['Tipo Siembra']=d.tipoSiembra==='directa'?'D':d.tipoSiembra==='tradicional'?'T':'';
         row['Sup. Declarada (ha)']=d.superficie||'';
         row['Fecha Siembra']=d.fechaSiembra||'';
         row['Notas']=d.notas||'';
@@ -1371,27 +1475,39 @@ function exportarExcelCampana(campana) {
     } else {
       var row={};
       for(var k in base) row[k]=base[k];
-      row['Cultivo']=''; row['Semilla']=''; row['Sup. Declarada (ha)']=''; row['Fecha Siembra']=''; row['Notas']='';
+      row['Cultivo']=''; row['Semilla']=''; row['Tipo Siembra']=''; row['Sup. Declarada (ha)']=''; row['Fecha Siembra']=''; row['Notas']='';
       datos.push(row);
     }
   }
   if(!datos.length){toast('Sin datos para exportar',true);return;}
   var wb = XLSX.utils.book_new();
   var ws = XLSX.utils.json_to_sheet(datos);
-  ws['!cols'] = [22,10,10,10,14,14,22,18,14,10,18,16,16,14,30].map(function(w){return{wch:w};});
+  ws['!cols'] = [22,10,10,10,14,14,22,18,14,10,18,16,14,16,14,30].map(function(w){return{wch:w};});
   XLSX.utils.book_append_sheet(wb, ws, 'Campana '+campana);
   XLSX.writeFile(wb, 'PAC_'+usuarioActual.nombre+'_'+campana+'.xlsx');
   toast('Excel campaña '+campana+' exportado');
 }
 
+var PLANTILLA_B64 = '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';
+
 function descargarPlantilla(mode) {
-  var datos,nombre;
-  if(mode==='sigpac'){datos=[{'Referencia SIGPAC':'9-403-0-0-501-15-1','Poligono':501,'Parcela':15,'Recinto':1,'Superficie TOTAL':'0,95','REGADIO / SECANO':'S','NOMBRE PARCELA':'VINA 1','POBLACION':'Tortoles de Esgueva'}];nombre='PAC_Plantilla_SIGPAC.xlsx';}
-  else{datos=[{'Nombre':'El Cerro','Referencia Catastral':'14001A00100001','Superficie (ha)':5.5,'Municipio':'Cordoba','Provincia':'Cordoba','Notas':''}];nombre='PAC_Plantilla.xlsx';}
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
-  XLSX.utils.book_append_sheet(wb,ws,'Parcelas');
-  XLSX.writeFile(wb,nombre);
-  toast('Plantilla descargada');
+  if(mode==='sigpac') {
+    var byteChars = atob(PLANTILLA_B64);
+    var byteArr = new Uint8Array(byteChars.length);
+    for(var i=0;i<byteChars.length;i++) byteArr[i]=byteChars.charCodeAt(i);
+    var blob = new Blob([byteArr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href=url; a.download='explotacion.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Plantilla descargada');
+  } else {
+    var datos=[{'Nombre':'El Cerro','Referencia Catastral':'14001A00100001','Superficie (ha)':5.5,'Municipio':'Cordoba','Provincia':'Cordoba','Notas':''}];
+    var wb=XLSX.utils.book_new(); var ws=XLSX.utils.json_to_sheet(datos);
+    XLSX.utils.book_append_sheet(wb,ws,'Parcelas');
+    XLSX.writeFile(wb,'PAC_Plantilla.xlsx');
+    toast('Plantilla descargada');
+  }
 }
 
 function hacerCopia() {
@@ -1421,6 +1537,17 @@ function restaurarCopia(event) {
     save(); renderCampanas(); renderPAC(); toast('Datos restaurados');
   };
   reader.readAsText(file); event.target.value='';
+}
+
+function mostrarConfirmacion(titulo, mensaje, callback) {
+  document.getElementById('confirmarTitulo').textContent = titulo;
+  document.getElementById('confirmarMensaje').textContent = mensaje;
+  var btn = document.getElementById('btnConfirmarSi');
+  btn.onclick = function(){
+    cerrarModal('modalConfirmar');
+    callback();
+  };
+  document.getElementById('modalConfirmar').classList.add('open');
 }
 
 function cerrarModal(id){document.getElementById(id).classList.remove('open');}
@@ -1468,17 +1595,27 @@ function bindModalEvents() {
   var btnElim = document.getElementById('btnEliminarSeleccion');
   if(btnElim) btnElim.addEventListener('click', function(){ eliminarSeleccionadas(); });
 
+  // Ajustes tab buttons
+  var btnCA = document.getElementById('btnCopiaAjustes');
+  if(btnCA) btnCA.addEventListener('click', function(){ hacerCopia(); });
+  var btnRA = document.getElementById('btnRestaurarAjustes');
+  if(btnRA) btnRA.addEventListener('click', function(){ document.getElementById('fileInputRestore').click(); });
+
+  // Ajustes tab - nueva campaña
+  var btnNCA = document.getElementById('btnNuevaCampanaAjustes');
+  if(btnNCA) btnNCA.addEventListener('click', function(){ nuevaCampana(); });
+
+  // Ajustes tab sync buttons
+  var btnCA = document.getElementById('btnCopiaAjustes');
+  if(btnCA) btnCA.addEventListener('click', function(){ hacerCopia(); });
+  var btnRA = document.getElementById('btnRestaurarAjustes');
+  if(btnRA) btnRA.addEventListener('click', function(){ document.getElementById('fileInputRestore').click(); });
+
   // Exportar en importar tab
   var btnExpImp = document.getElementById('btnExportarImportar');
   if(btnExpImp) btnExpImp.addEventListener('click', function(){ exportarExcel(); });
 
-  // Header buttons
-  var btnEx = document.getElementById('btnExcel');
-  if(btnEx) btnEx.addEventListener('click', function(){ exportarExcel(); });
-  var btnCop = document.getElementById('btnCopia');
-  if(btnCop) btnCop.addEventListener('click', function(){ hacerCopia(); });
-  var btnRes = document.getElementById('btnRestaurar');
-  if(btnRes) btnRes.addEventListener('click', function(){ document.getElementById('fileInputRestore').click(); });
+  // Header buttons (moved to Ajustes tab)
 
   // Modal exportar
   var btnCE = document.getElementById('btnCerrarExportar');
