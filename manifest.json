@@ -2,9 +2,9 @@
   "name": "PAC Gestión",
   "short_name": "PAC",
   "description": "Gestión de parcelas agrícolas PAC - Campañas, cultivos y laboreos",
-  "id": "/GESTIONPAC/",
-  "start_url": "./",
-  "scope": "./",
+  "id": "https://jaimepolilla.github.io/GESTIONPAC/",
+  "start_url": "https://jaimepolilla.github.io/GESTIONPAC/",
+  "scope": "https://jaimepolilla.github.io/GESTIONPAC/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#edf3ea",
@@ -16,13 +16,13 @@
   ],
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "https://jaimepolilla.github.io/GESTIONPAC/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "https://jaimepolilla.github.io/GESTIONPAC/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
