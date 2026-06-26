@@ -154,8 +154,10 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 .campana-bar select{flex:1;padding:10px 12px;font-size:14px;}
 .campana-btn{padding:10px 18px;border-radius:14px;border:2px solid var(--borde);background:var(--blanco);color:var(--gris);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:all 0.2s;text-align:center;line-height:1.2;}
 .campana-btn-activa{background:var(--verde);color:white;border-color:var(--verde);box-shadow:0 2px 8px rgba(61,107,47,0.35);}
-.tipo-siembra-btn.activo{background:var(--verde-fondo);border-color:var(--verde);color:var(--verde);}
-.tipo-siembra-btn:active{background:var(--verde-fondo);}
+.tipo-siembra-btn{flex:1;padding:14px 10px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:all 0.2s;}
+.tipo-siembra-btn.activo,.laboreo-siembra-btn.activo{background:var(--verde)!important;border-color:var(--verde)!important;color:white!important;}
+.tipo-siembra-btn:active,.laboreo-siembra-btn:active{opacity:0.8;}
+.laboreo-siembra-btn{flex:1;padding:14px 10px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:all 0.2s;}
 .maq-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde);}
 .maq-item:last-child{border-bottom:none;}
 .maq-icon{width:40px;height:40px;border-radius:10px;background:var(--tierra-claro);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
@@ -414,6 +416,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <datalist id="cultivosSuggestions"></datalist>
     <label>Semilla / Variedad</label>
     <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    <label>Tipo de siembra *</label>
+    <div style="display:flex;gap:10px;margin-bottom:4px">
+      <button type="button" class="tipo-siembra-btn" id="btnSiembraDirecta" data-val="directa">D - Directa</button>
+      <button type="button" class="tipo-siembra-btn" id="btnSiembraTradicional" data-val="tradicional">T - Tradicional</button>
+    </div>
+    <input type="hidden" id="cultivoTipoSiembra" value="">
     <label>Superficie a declarar (ha) *</label>
     <input type="number" id="cultivoSuperficie" placeholder="0.00" step="0.01" min="0.01">
     <label>Fecha de siembra</label><input type="date" id="cultivoFechaSiembra">
@@ -500,6 +508,15 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     </select>
     <label>Producto / Descripcion *</label>
     <input type="text" id="laboreoProducto" placeholder="Ej: Roundup, Urea 46%...">
+    <!-- Tipo siembra - solo visible cuando tipo=Siembra -->
+    <div id="laboreoTipoSiembraDiv" style="display:none">
+      <label>Tipo de siembra *</label>
+      <div style="display:flex;gap:10px;margin-bottom:4px">
+        <button type="button" class="laboreo-siembra-btn" data-val="directa">D - Directa</button>
+        <button type="button" class="laboreo-siembra-btn" data-val="tradicional">T - Tradicional</button>
+      </div>
+      <input type="hidden" id="laboreoTipoSiembra" value="">
+    </div>
     <div class="form-row">
       <div><label>Dosis / Cantidad</label><input type="text" id="laboreoDosis" placeholder="Ej: 2 l/ha"></div>
       <div><label>Fecha *</label><input type="date" id="laboreoFecha"></div>
@@ -539,6 +556,18 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <label>Modelo</label>
     <input type="text" id="maqModelo" placeholder="Ej: 6130R">
     <button class="btn-primary" style="margin-top:12px" id="btnAnadirMaquinaria">+ A&#241;adir maquina</button>
+  </div>
+</div>
+
+<!-- MODAL EXPORTAR CAMPAÑA -->
+<div class="modal-overlay" id="modalExportar">
+  <div class="modal" style="max-height:70vh">
+    <div class="modal-title">
+      <span id="modalExportarTitulo">Exportar campaña</span>
+      <button class="modal-close" id="btnCerrarExportar">X</button>
+    </div>
+    <div id="modalExportarDesc" style="font-size:13px;color:#888;margin-bottom:14px">Selecciona la campaña</div>
+    <div id="exportCampanaList"></div>
   </div>
 </div>
 
@@ -706,15 +735,43 @@ function abrirModalLaboreo(parcelaId, lineaId) {
       document.getElementById('laboreoFecha').value=d.fecha||'';
       document.getElementById('laboreoMaquinaria').value=d.maquinaria||'';
       document.getElementById('laboreoNotas').value=d.notas||'';
+      document.getElementById('laboreoTipoSiembra').value=d.tipoSiembra||'';
       break;}}
   } else {
     ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('laboreoMaquinaria').value='';
+    document.getElementById('laboreoTipoSiembra').value='';
+    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
   }
   document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
   document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
+  // Show/hide tipo siembra based on tipo selection
+  function toggleTipoSiembra() {
+    var tipo = document.getElementById('laboreoTipo').value;
+    var div = document.getElementById('laboreoTipoSiembraDiv');
+    if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
+    if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
+  }
+  document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
+  toggleTipoSiembra();
+  // Bind tipo siembra buttons - scoped to modalCultivo
+  document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
+  // Bind laboreo siembra buttons
+  document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
+      this.classList.add('activo');
+      document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
   document.getElementById('modalLaboreo').classList.add('open');
 }
 
@@ -724,7 +781,9 @@ function guardarLaboreo() {
   var tipo=document.getElementById('laboreoTipo').value;
   var producto=document.getElementById('laboreoProducto').value.trim();
   var fecha=document.getElementById('laboreoFecha').value;
+  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
   if(!tipo){toast('Selecciona el tipo de labor',true);return;}
+  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
   if(!producto){toast('Indica el producto',true);return;}
   if(!fecha){toast('Indica la fecha',true);return;}
   var laboreos=DB.get(uk('laboreos'),[]);
@@ -749,6 +808,8 @@ showPage = function(name) {
   if(name === 'importar') {
     var btnEx = document.getElementById('btnExportarAjustes');
     if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
+    var btnTrab = document.getElementById('btnExportarTrabajos');
+    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
     var btnCop = document.getElementById('btnCopiaAjustes');
     if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
     var btnRes = document.getElementById('btnRestaurarAjustes');
@@ -963,15 +1024,43 @@ function abrirModalLaboreo(parcelaId, lineaId) {
       document.getElementById('laboreoFecha').value=d.fecha||'';
       document.getElementById('laboreoMaquinaria').value=d.maquinaria||'';
       document.getElementById('laboreoNotas').value=d.notas||'';
+      document.getElementById('laboreoTipoSiembra').value=d.tipoSiembra||'';
       break;}}
   } else {
     ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('laboreoMaquinaria').value='';
+    document.getElementById('laboreoTipoSiembra').value='';
+    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
   }
   document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
   document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
+  // Show/hide tipo siembra based on tipo selection
+  function toggleTipoSiembra() {
+    var tipo = document.getElementById('laboreoTipo').value;
+    var div = document.getElementById('laboreoTipoSiembraDiv');
+    if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
+    if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
+  }
+  document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
+  toggleTipoSiembra();
+  // Bind tipo siembra buttons - scoped to modalCultivo
+  document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
+  // Bind laboreo siembra buttons
+  document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
+      this.classList.add('activo');
+      document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
   document.getElementById('modalLaboreo').classList.add('open');
 }
 
@@ -981,7 +1070,9 @@ function guardarLaboreo() {
   var tipo=document.getElementById('laboreoTipo').value;
   var producto=document.getElementById('laboreoProducto').value.trim();
   var fecha=document.getElementById('laboreoFecha').value;
+  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
   if(!tipo){toast('Selecciona el tipo de labor',true);return;}
+  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
   if(!producto){toast('Indica el producto',true);return;}
   if(!fecha){toast('Indica la fecha',true);return;}
   var laboreos=DB.get(uk('laboreos'),[]);
@@ -1006,6 +1097,8 @@ showPage = function(name) {
   if(name === 'importar') {
     var btnEx = document.getElementById('btnExportarAjustes');
     if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
+    var btnTrab = document.getElementById('btnExportarTrabajos');
+    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
     var btnCop = document.getElementById('btnCopiaAjustes');
     if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
     var btnRes = document.getElementById('btnRestaurarAjustes');
@@ -1307,13 +1400,16 @@ function renderPAC() {
       for(var j=0;j<laboreosCard.length;j++){
         var lb = laboreosCard[j];
         var lbIco = lbIconos[lb.tipo]||'&#128295;';
-        laboreosHTML += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--borde)">' +
+        var isAuto = lb.autoGenerado ? ' style="opacity:0.7"' : '';
+        var editDel = lb.autoGenerado ?
+          '<span style="font-size:11px;color:#aaa;padding:4px 6px">auto</span>' :
+          '<button class="pac-cultivo-btn pac-btn-edit-laboreo" data-id="'+lb.id+'" data-pid="'+lb.parcelaId+'">&#9998;</button>'+
+          '<button class="pac-cultivo-btn pac-btn-del-laboreo" data-id="'+lb.id+'">&#128465;</button>';
+        laboreosHTML += '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--borde)"'+isAuto+'>' +
           '<span style="font-size:16px">'+lbIco+'</span>' +
           '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+lb.tipo+' &bull; '+lb.producto+'</div>' +
           '<div style="font-size:11px;color:#888">'+(lb.dosis?lb.dosis+' &bull; ':'')+lb.fecha+(lb.maquinaria?' &bull; '+lb.maquinaria:'')+'</div></div>' +
-          '<button class="pac-cultivo-btn pac-btn-edit-laboreo" data-id="'+lb.id+'" data-pid="'+lb.parcelaId+'">&#9998;</button>' +
-          '<button class="pac-cultivo-btn pac-btn-del-laboreo" data-id="'+lb.id+'">&#128465;</button>' +
-          '</div>';
+          editDel + '</div>';
       }
       laboreosHTML += '</div>';
     }
@@ -1397,6 +1493,8 @@ function abrirModalCultivo(parcelaId, lineaId) {
       document.getElementById('cultivoNotas').value=d.notas||'';
     }
   } else {
+    document.getElementById('cultivoTipoSiembra').value='';
+    document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
     document.getElementById('cultivoCultivo').value='';
     document.getElementById('cultivoSemilla').value='';
     document.getElementById('cultivoSuperficie').value='';
@@ -1404,6 +1502,22 @@ function abrirModalCultivo(parcelaId, lineaId) {
     document.getElementById('cultivoNotas').value='';
   }
   actualizarDisponible();
+  // Bind guardar/cancelar
+  var _bgc = document.getElementById('btnGuardarCultivo');
+  if(_bgc) _bgc.onclick = guardarLineaCultivo;
+  var _bcc = document.getElementById('btnCancelarCultivo');
+  if(_bcc) _bcc.onclick = function(){ cerrarModal('modalCultivo'); };
+  var _cs = document.getElementById('cultivoSuperficie');
+  if(_cs) _cs.oninput = actualizarDisponible;
+  // Bind tipo siembra D/T buttons
+  var _modalC = document.getElementById('modalCultivo');
+  _modalC.querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      _modalC.querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
   document.getElementById('modalCultivo').classList.add('open');
 }
 
@@ -1456,7 +1570,9 @@ function guardarLineaCultivo() {
   var obj = {
     id: lineaId || (Date.now().toString()+Math.random().toString(36).slice(2)),
     parcelaId: parcelaId, campana: campanaActual, cultivo: cultivo,
-    semilla: document.getElementById('cultivoSemilla').value,
+    categoria:   document.getElementById('cultivoCategoria') ? document.getElementById('cultivoCategoria').value : '',
+    semilla:     document.getElementById('cultivoSemilla').value,
+    tipoSiembra: document.getElementById('cultivoTipoSiembra') ? document.getElementById('cultivoTipoSiembra').value : '',
     superficie: superficie,
     fechaSiembra: document.getElementById('cultivoFechaSiembra').value,
     notas: document.getElementById('cultivoNotas').value.trim()
@@ -1464,6 +1580,28 @@ function guardarLineaCultivo() {
   var idx = -1;
   for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id===obj.id){idx=i;break;} }
   if(idx>=0) declaraciones[idx]=obj; else declaraciones.push(obj);
+
+  // Sync siembra with laboreos
+  var laboreos = DB.get(uk('laboreos'),[]);
+  laboreos = laboreos.filter(function(lb){ return lb.fromDeclaracionId !== obj.id; });
+  if(obj.fechaSiembra) {
+    var tipoLabel = obj.tipoSiembra==='directa'?'Directa':obj.tipoSiembra==='tradicional'?'Tradicional':'';
+    laboreos.push({
+      id: 'siem_'+obj.id,
+      fromDeclaracionId: obj.id,
+      parcelaId: obj.parcelaId,
+      campana: obj.campana,
+      tipo: 'Siembra',
+      producto: obj.cultivo,
+      dosis: obj.superficie+' ha',
+      fecha: obj.fechaSiembra,
+      maquinaria: '',
+      notas: tipoLabel + (obj.semilla?' - '+obj.semilla:''),
+      autoGenerado: true
+    });
+  }
+  DB.set(uk('laboreos'), laboreos);
+
   save(); cerrarModal('modalCultivo'); renderPAC();
   toast(lineaId?'Cultivo actualizado':'Cultivo declarado');
 }
@@ -1735,35 +1873,72 @@ function cancelarImportacion(mode) {
 }
 
 function exportarExcel() {
+  if(!campanas.length){toast('No hay campaas creadas',true);return;}
+  document.getElementById('modalExportarTitulo').textContent = 'Exportar declaracion de cultivos';
+  document.getElementById('modalExportarDesc').textContent = 'Selecciona la campana a exportar';
+  var list = document.getElementById('exportCampanaList');
+  var html = '';
+  for(var i=0;i<campanas.length;i++){
+    var c = campanas[i];
+    var nDecl = 0, haDecl = 0;
+    for(var j=0;j<declaraciones.length;j++){
+      if(declaraciones[j].campana===c){ nDecl++; haDecl+=parseFloat(declaraciones[j].superficie)||0; }
+    }
+    html += '<button class="export-campana-btn" data-campana="'+c+'" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--verde-fondo);border:1.5px solid var(--borde);border-radius:10px;padding:14px 16px;margin-bottom:10px;cursor:pointer;touch-action:manipulation;">' +
+      '<div style="text-align:left"><div style="font-size:17px;font-weight:800;color:var(--verde)">Campana '+c+'</div>' +
+      '<div style="font-size:12px;color:#888;margin-top:3px">'+nDecl+' cultivos &bull; '+haDecl.toFixed(2)+' ha declaradas</div></div>' +
+      '<div style="font-size:22px">&#128229;</div></button>';
+  }
+  list.innerHTML = html;
+  list.querySelectorAll('.export-campana-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var campana = this.getAttribute('data-campana');
+      cerrarModal('modalExportar');
+      exportarExcelCampana(campana);
+    });
+  });
+  document.getElementById('modalExportar').classList.add('open');
+}
+
+function exportarExcelCampana(campana) {
   if(!parcelas.length){toast('Sin parcelas para exportar',true);return;}
   var datos=[];
   for(var i=0;i<parcelas.length;i++){
     var p=parcelas[i];
     var lineas=[];
-    for(var j=0;j<declaraciones.length;j++){if(declaraciones[j].parcelaId===p.id&&declaraciones[j].campana===campanaActual)lineas.push(declaraciones[j]);}
-    var base={'Ref SIGPAC':p.refSIGPAC||'','Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Nombre':p.nombre||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campanaActual};
-    if(lineas.length){for(var j=0;j<lineas.length;j++){var d=lineas[j];var row={};for(var k in base)row[k]=base[k];row['Cultivo']=d.cultivo;row['Semilla']=d.semilla||'';row['Sup Declarada']=d.superficie||'';row['Fecha Siembra']=d.fechaSiembra||'';row['Notas']=d.notas||'';datos.push(row);}}
-    else{var row={};for(var k in base)row[k]=base[k];row['Cultivo']='';row['Semilla']='';row['Sup Declarada']='';row['Fecha Siembra']='';row['Notas']='';datos.push(row);}
+    for(var j=0;j<declaraciones.length;j++){if(declaraciones[j].parcelaId===p.id&&declaraciones[j].campana===campana)lineas.push(declaraciones[j]);}
+    var base={'Ref SIGPAC':p.refSIGPAC||'','Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campana};
+    if(lineas.length){
+      for(var j=0;j<lineas.length;j++){
+        var d=lineas[j];var row={};for(var k in base)row[k]=base[k];
+        row['Categoria']=d.categoria||'';
+        row['Cultivo']=d.cultivo||'';
+        row['Tipo Siembra']=d.tipoSiembra==='directa'?'D':d.tipoSiembra==='tradicional'?'T':'';
+        row['Semilla']=d.semilla||'';
+        row['Sup Declarada (ha)']=d.superficie||'';
+        row['Fecha Siembra']=d.fechaSiembra||'';
+        row['Notas']=d.notas||'';
+        datos.push(row);
+      }
+    } else {
+      var row={};for(var k in base)row[k]=base[k];
+      row['Categoria']='';row['Cultivo']='';row['Tipo Siembra']='';row['Semilla']='';row['Sup Declarada (ha)']='';row['Fecha Siembra']='';row['Notas']='';
+      datos.push(row);
+    }
   }
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
-  XLSX.utils.book_append_sheet(wb,ws,'PAC '+campanaActual);
-  XLSX.writeFile(wb,'PAC_'+usuarioActual.nombre+'_'+campanaActual+'.xlsx');
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.json_to_sheet(datos);
+  ws['!cols']=[22,10,10,10,14,14,22,18,14,10,14,18,10,16,14,30].map(function(w){return{wch:w};});
+  XLSX.utils.book_append_sheet(wb,ws,'PAC '+campana);
+  XLSX.writeFile(wb,'PAC_'+usuarioActual.nombre+'_'+campana+'.xlsx');
   toast('Excel exportado');
 }
 
-var PLANTILLA_B64='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';
-function descargarPlantilla(mode) {
-  var datos,nombre;
-  if(mode==='sigpac'){datos=[{'Referencia SIGPAC':'9-403-0-0-501-15-1','Poligono':501,'Parcela':15,'Recinto':1,'Superficie TOTAL':'0,95','REGADIO / SECANO':'S','NOMBRE PARCELA':'VINA 1','POBLACION':'Tortoles de Esgueva'}];nombre='PAC_Plantilla_SIGPAC.xlsx';}
-  else{datos=[{'Nombre':'El Cerro','Referencia Catastral':'14001A00100001','Superficie (ha)':5.5,'Municipio':'Cordoba','Provincia':'Cordoba','Notas':''}];nombre='PAC_Plantilla.xlsx';}
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.json_to_sheet(datos);
-  XLSX.utils.book_append_sheet(wb,ws,'Parcelas');
-  XLSX.writeFile(wb,nombre);
-  toast('Plantilla descargada');
-}
 
 function exportarTrabajos() {
   if(!campanas.length){ toast('No hay campanas creadas', true); return; }
+  document.getElementById('modalExportarTitulo').textContent = 'Exportar trabajos por parcela';
+  document.getElementById('modalExportarDesc').textContent = 'Selecciona la campaña cuyos trabajos quieres exportar';
   var list = document.getElementById('exportCampanaList');
   var laboreos = DB.get(uk('laboreos'),[]);
   var html = '';
@@ -1796,14 +1971,18 @@ function exportarTrabajosCampana(campana) {
     for(var j=0;j<parcelas.length;j++){ if(parcelas[j].id===lb.parcelaId){p=parcelas[j];break;} }
     datos.push({
       'Campana':           campana,
-      'Parcela':           p?p.nombre||'':'',
-      'Municipio':         p?p.municipio||'':'',
       'Ref. SIGPAC':       p?p.refSIGPAC||'':'',
+      'Poligono':          p?p.poligono||'':'',
+      'Parcela Num':       p?p.parcela||'':'',
+      'Recinto':           p?p.recinto||'':'',
+      'Nombre Parcela':    p?p.nombre||'':'',
+      'Municipio':         p?p.municipio||'':'',
       'Sup. Parcela (ha)': p?p.superficie||'':'',
       'Tipo Labor':        lb.tipo||'',
       'Producto':          lb.producto||'',
       'Dosis':             lb.dosis||'',
       'Fecha':             lb.fecha||'',
+      'Tipo Siembra':      lb.tipoSiembra==='directa'?'D':lb.tipoSiembra==='tradicional'?'T':(lb.tipo==='Siembra'&&lb.notas&&lb.notas.indexOf('Directa')>=0?'D':lb.tipo==='Siembra'&&lb.notas&&lb.notas.indexOf('Tradicional')>=0?'T':''),
       'Maquinaria':        lb.maquinaria||'',
       'Notas':             lb.notas||''
     });
@@ -1811,7 +1990,7 @@ function exportarTrabajosCampana(campana) {
   if(!datos.length){ toast('Sin trabajos en esta campana', true); return; }
   datos.sort(function(a,b){ return a['Parcela'].localeCompare(b['Parcela'])||a['Fecha'].localeCompare(b['Fecha']); });
   var wb=XLSX.utils.book_new(), ws=XLSX.utils.json_to_sheet(datos);
-  ws['!cols']=[10,22,18,22,14,18,22,12,12,18,30].map(function(w){return{wch:w};});
+  ws['!cols']=[10,22,10,10,10,22,18,14,18,22,12,12,10,18,30].map(function(w){return{wch:w};});
   XLSX.utils.book_append_sheet(wb,ws,'Trabajos '+campana);
   XLSX.writeFile(wb,'Trabajos_'+usuarioActual.nombre+'_'+campana+'.xlsx');
   toast('Trabajos exportados');
@@ -1985,15 +2164,43 @@ function abrirModalLaboreo(parcelaId, lineaId) {
       document.getElementById('laboreoFecha').value=d.fecha||'';
       document.getElementById('laboreoMaquinaria').value=d.maquinaria||'';
       document.getElementById('laboreoNotas').value=d.notas||'';
+      document.getElementById('laboreoTipoSiembra').value=d.tipoSiembra||'';
       break;}}
   } else {
     ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('laboreoMaquinaria').value='';
+    document.getElementById('laboreoTipoSiembra').value='';
+    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
   }
   document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
   document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
+  // Show/hide tipo siembra based on tipo selection
+  function toggleTipoSiembra() {
+    var tipo = document.getElementById('laboreoTipo').value;
+    var div = document.getElementById('laboreoTipoSiembraDiv');
+    if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
+    if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
+  }
+  document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
+  toggleTipoSiembra();
+  // Bind tipo siembra buttons - scoped to modalCultivo
+  document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
+  // Bind laboreo siembra buttons
+  document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
+      this.classList.add('activo');
+      document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
   document.getElementById('modalLaboreo').classList.add('open');
 }
 
@@ -2003,7 +2210,9 @@ function guardarLaboreo() {
   var tipo=document.getElementById('laboreoTipo').value;
   var producto=document.getElementById('laboreoProducto').value.trim();
   var fecha=document.getElementById('laboreoFecha').value;
+  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
   if(!tipo){toast('Selecciona el tipo de labor',true);return;}
+  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
   if(!producto){toast('Indica el producto',true);return;}
   if(!fecha){toast('Indica la fecha',true);return;}
   var laboreos=DB.get(uk('laboreos'),[]);
@@ -2028,6 +2237,8 @@ showPage = function(name) {
   if(name === 'importar') {
     var btnEx = document.getElementById('btnExportarAjustes');
     if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
+    var btnTrab = document.getElementById('btnExportarTrabajos');
+    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
     var btnCop = document.getElementById('btnCopiaAjustes');
     if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
     var btnRes = document.getElementById('btnRestaurarAjustes');
