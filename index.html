@@ -1753,7 +1753,8 @@ function abrirSIGPAC(parcelaId) {
     var parts=p.refSIGPAC.split('-');
     if(parts.length>=6) url='https://sigpac.mapa.gob.es/fega/visor/?cp='+parts[0]+'&cm='+parts[1]+'&agr='+(parts[2]||0)+'&zona='+(parts[3]||0)+'&pol='+parts[4]+'&par='+parts[5]+'&rec='+(parts[6]||1);
   }
-  window.open(url,'_blank');
+  // window.open blocked in WebView - use location.href instead
+  window.location.href = url;
 }
 
 var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
@@ -2305,10 +2306,10 @@ function mostrarModalGPS(parcelaId) {
   document.getElementById('btnCerrarGPS').onclick = function(){ div.parentNode.removeChild(div); };
   document.getElementById('btnCancelarGPS').onclick = function(){ div.parentNode.removeChild(div); };
   document.getElementById('btnAbrirGoogleMaps').onclick = function(){
-    window.open('https://www.google.com/maps', '_blank');
+    window.location.href = 'https://www.google.com/maps';
   };
   document.getElementById('btnAbrirAppleMaps').onclick = function(){
-    window.open('https://maps.apple.com/', '_blank');
+    window.location.href = 'https://maps.apple.com/';
   };
   document.getElementById('btnGuardarGPS').onclick = function(){
     var val = document.getElementById('gpsManualInput').value.trim();
@@ -2334,7 +2335,8 @@ function verEnMapa(gps) {
   var url = isApple
     ? 'maps://maps.apple.com/?ll=' + lat + ',' + lon + '&q=Parcela'
     : 'https://www.google.com/maps?q=' + lat + ',' + lon;
-  window.open(url, '_blank');
+  // window.open blocked in WebView
+  window.location.href = url;
 }
 </script>
 </body>
