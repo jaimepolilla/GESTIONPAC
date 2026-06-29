@@ -1668,6 +1668,15 @@ function renderParcelas() {
   cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
     el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
   });
+  cont.querySelectorAll('.parc-btn-gps').forEach(function(el){
+    el.addEventListener('click', function(){ capturarGPSParcela(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.parc-btn-mapa').forEach(function(el){
+    el.addEventListener('click', function(){
+      var p = parcelas.find(function(x){ return x.id === el.getAttribute('data-id'); });
+      if (p && p.gps) verEnMapa(p.gps);
+    });
+  });
 }
 
 
