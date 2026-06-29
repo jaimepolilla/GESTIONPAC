@@ -681,8 +681,12 @@ function agregarMaquinaria() {
 }
 
 function eliminarMaquinaria(id) {
-  var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
+  mostrarConfirmacion('Eliminar maquinaria', '¿Seguro que quieres eliminar esta máquina?', function() {
+    var maq = DB.get(uk('maquinaria'),[]).filter(function(m){ return m.id !== id; });
+    DB.set(uk('maquinaria'), maq);
+    renderMaquinaria();
+    toast('Máquina eliminada');
+  });
 }
 
 var fitoTemp=[], fertTemp=[];
@@ -802,26 +806,7 @@ function eliminarLaboreo(lineaId) {
 }
 
 // Bind Ajustes buttons on page show
-var _origShowPage = showPage;
-showPage = function(name) {
-  _origShowPage(name);
-  if(name === 'importar') {
-    var btnEx = document.getElementById('btnExportarAjustes');
-    if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
-    var btnTrab = document.getElementById('btnExportarTrabajos');
-    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
-    var btnCop = document.getElementById('btnCopiaAjustes');
-    if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
-    var btnRes = document.getElementById('btnRestaurarAjustes');
-    if(btnRes) btnRes.onclick = function(){ document.getElementById('fileInputRestore').click(); };
-    var btnMaq = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq) btnMaq.onclick = function(){ agregarMaquinaria(); };
-  }
-  if(name === 'maquinaria') {
-    var btnMaq2 = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq2) btnMaq2.onclick = function(){ agregarMaquinaria(); };
-  }
-};
+
 
 renderLoginUsers();
       alert('Datos de ' + nombreUsuario + ' restaurados. Ya puedes seleccionar tu usuario.');
@@ -970,8 +955,12 @@ function agregarMaquinaria() {
 }
 
 function eliminarMaquinaria(id) {
-  var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
+  mostrarConfirmacion('Eliminar maquinaria', '¿Seguro que quieres eliminar esta máquina?', function() {
+    var maq = DB.get(uk('maquinaria'),[]).filter(function(m){ return m.id !== id; });
+    DB.set(uk('maquinaria'), maq);
+    renderMaquinaria();
+    toast('Máquina eliminada');
+  });
 }
 
 var fitoTemp=[], fertTemp=[];
@@ -1091,26 +1080,7 @@ function eliminarLaboreo(lineaId) {
 }
 
 // Bind Ajustes buttons on page show
-var _origShowPage = showPage;
-showPage = function(name) {
-  _origShowPage(name);
-  if(name === 'importar') {
-    var btnEx = document.getElementById('btnExportarAjustes');
-    if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
-    var btnTrab = document.getElementById('btnExportarTrabajos');
-    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
-    var btnCop = document.getElementById('btnCopiaAjustes');
-    if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
-    var btnRes = document.getElementById('btnRestaurarAjustes');
-    if(btnRes) btnRes.onclick = function(){ document.getElementById('fileInputRestore').click(); };
-    var btnMaq = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq) btnMaq.onclick = function(){ agregarMaquinaria(); };
-  }
-  if(name === 'maquinaria') {
-    var btnMaq2 = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq2) btnMaq2.onclick = function(){ agregarMaquinaria(); };
-  }
-};
+
 
 renderLoginUsers();
   showScreen('screenLogin');
@@ -1607,11 +1577,13 @@ function guardarLineaCultivo() {
 }
 
 function eliminarLineaCultivo(lineaId) {
-  if(!confirm('Eliminar esta linea de cultivo?')) return;
-  var nuevas = [];
-  for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id!==lineaId) nuevas.push(declaraciones[i]); }
-  declaraciones = nuevas;
-  save(); renderPAC(); toast('Linea eliminada');
+  mostrarConfirmacion('Eliminar cultivo', '¿Seguro que quieres eliminar este cultivo?', function() {
+    var nuevas = declaraciones.filter(function(d){ return d.id !== lineaId; });
+    declaraciones = nuevas;
+    var laboreos = DB.get(uk('laboreos'),[]).filter(function(lb){ return lb.fromDeclaracionId !== lineaId; });
+    DB.set(uk('laboreos'), laboreos);
+    save(); renderPAC(); toast('Cultivo eliminado');
+  });
 }
 
 function setFiltro(v) {
@@ -1654,7 +1626,6 @@ function renderParcelas() {
       '<button class="btn-sm btn-edit parc-btn-editar" data-id="'+p.id+'">&#9998; Editar</button>' +
       '<button class="btn-sm btn-del parc-btn-borrar" data-id="'+p.id+'">&#128465; Eliminar</button>' +
       (p.refSIGPAC?'<button class="btn-sm parc-btn-sigpac" data-id="'+p.id+'" style="background:var(--azul-claro);color:var(--azul)">&#128506; SIGPAC</button>':'') +
-      (p.gps?'<button class="btn-sm parc-btn-mapa" data-id="'+p.id+'" style="background:#fef3e2;color:#d35400">&#127757; Mapa</button>':'<button class="btn-sm parc-btn-gps" data-id="'+p.id+'" style="background:#fef3e2;color:#d35400">&#128205; Ubicación</button>') +
       '</div></div>';
   }
   cont.innerHTML = html;
@@ -1667,16 +1638,6 @@ function renderParcelas() {
   });
   cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
     el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
-  });
-  cont.querySelectorAll('.parc-btn-gps').forEach(function(el){
-    el.addEventListener('click', function(){ capturarGPSParcela(this.getAttribute('data-id')); });
-  });
-  cont.querySelectorAll('.parc-btn-mapa').forEach(function(el){
-    el.addEventListener('click', function(){
-      var pid=this.getAttribute('data-id');
-      var p=parcelas.find(function(x){return x.id===pid;});
-      if(p&&p.gps)verEnMapa(p.gps);
-    });
   });
 }
 
@@ -1736,12 +1697,13 @@ function guardarParcela() {
 }
 
 function eliminarParcela(id) {
-  if(!confirm('Eliminar esta parcela y sus cultivos?')) return;
-  var np=[],nd=[];
-  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id!==id)np.push(parcelas[i]);}
-  for(var i=0;i<declaraciones.length;i++){if(declaraciones[i].parcelaId!==id)nd.push(declaraciones[i]);}
-  parcelas=np; declaraciones=nd;
-  save(); renderParcelas(); toast('Parcela eliminada');
+  mostrarConfirmacion('Eliminar campo', '¿Seguro que quieres eliminar este campo y todos sus cultivos?', function() {
+    parcelas = parcelas.filter(function(p){ return p.id !== id; });
+    declaraciones = declaraciones.filter(function(d){ return d.parcelaId !== id; });
+    var laboreos = DB.get(uk('laboreos'),[]).filter(function(lb){ return lb.parcelaId !== id; });
+    DB.set(uk('laboreos'), laboreos);
+    save(); renderParcelas(); toast('Campo eliminado');
+  });
 }
 
 function abrirSIGPAC(parcelaId) {
@@ -1753,8 +1715,7 @@ function abrirSIGPAC(parcelaId) {
     var parts=p.refSIGPAC.split('-');
     if(parts.length>=6) url='https://sigpac.mapa.gob.es/fega/visor/?cp='+parts[0]+'&cm='+parts[1]+'&agr='+(parts[2]||0)+'&zona='+(parts[3]||0)+'&pol='+parts[4]+'&par='+parts[5]+'&rec='+(parts[6]||1);
   }
-  // window.open blocked in WebView - use location.href instead
-  window.location.href = url;
+  window.open(url,'_blank');
 }
 
 var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
@@ -1781,10 +1742,11 @@ function agregarSemilla() {
 }
 
 function eliminarSemilla(id) {
-  if(!confirm('Eliminar esta semilla?')) return;
-  var ns=[];
-  for(var i=0;i<semillas.length;i++){if(semillas[i].id!==id)ns.push(semillas[i]);}
-  semillas=ns; save(); renderSemillas(); toast('Semilla eliminada');
+  id = String(id);
+  mostrarConfirmacion('Eliminar semilla', '¿Seguro que quieres eliminar esta semilla?', function() {
+    semillas = semillas.filter(function(s){ return String(s.id) !== id; });
+    save(); renderSemillas(); toast('Semilla eliminada');
+  });
 }
 
 function setImportMode(mode) {
@@ -2096,17 +2058,25 @@ function mostrarConfirmacion(titulo, mensaje, callback) {
 function renderMaquinaria() {
   var maquinaria = DB.get(uk('maquinaria'),[]);
   var cont = document.getElementById('listaMaquinaria');
-  if(!maquinaria.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">&#x1F69C;</div><div class="empty-text">Sin maquinaria anadida</div></div>'; return; }
-  var iconos={'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;','Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;','Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
+  if(!maquinaria.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">&#x1F69C;</div><div class="empty-text">Sin maquinaria añadida</div></div>'; return; }
+  var ico={'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;','Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;','Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
   var html='<div class="card">';
   for(var i=0;i<maquinaria.length;i++){
     var m=maquinaria[i];
-    html+='<div class="maq-item"><div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div><div><div class="maq-name">'+m.nombre+'</div><div class="maq-sub">'+(m.tipo||'')+' - '+(m.marca||'')+' '+(m.modelo||'')+'</div></div><button class="maq-del maq-btn-del" data-id="'+m.id+'">&#10005;</button></div>';
+    html+='<div class="maq-item"><div class="maq-icon">'+(ico[m.tipo]||'&#x1F527;')+'</div>'+
+      '<div style="flex:1;min-width:0"><div class="maq-name">'+m.nombre+'</div>'+
+      '<div class="maq-sub">'+(m.tipo||'')+(m.marca?' · '+m.marca:'')+(m.modelo?' '+m.modelo:'')+'</div></div>'+
+      '<button class="maq-btn-edit" data-id="'+m.id+'" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#aaa;touch-action:manipulation;">&#9998;</button>'+
+      '<button class="maq-btn-del" data-id="'+m.id+'" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#ccc;touch-action:manipulation;">&#10005;</button>'+
+      '</div>';
   }
   html+='</div>';
   cont.innerHTML=html;
   cont.querySelectorAll('.maq-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){ eliminarMaquinaria(this.getAttribute('data-id')); });
+    btn.addEventListener('click',function(e){eliminarMaquinaria(e.currentTarget.getAttribute('data-id'));});
+  });
+  cont.querySelectorAll('.maq-btn-edit').forEach(function(btn){
+    btn.addEventListener('click',function(e){editarMaquinaria(e.currentTarget.getAttribute('data-id'));});
   });
 }
 
@@ -2122,8 +2092,12 @@ function agregarMaquinaria() {
 }
 
 function eliminarMaquinaria(id) {
-  var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
+  mostrarConfirmacion('Eliminar maquinaria', '¿Seguro que quieres eliminar esta máquina?', function() {
+    var maq = DB.get(uk('maquinaria'),[]).filter(function(m){ return m.id !== id; });
+    DB.set(uk('maquinaria'), maq);
+    renderMaquinaria();
+    toast('Máquina eliminada');
+  });
 }
 
 var fitoTemp=[], fertTemp=[];
@@ -2243,101 +2217,72 @@ function eliminarLaboreo(lineaId) {
 }
 
 // Bind Ajustes buttons on page show
-var _origShowPage = showPage;
+
+
+
+var _origSP = showPage;
 showPage = function(name) {
-  _origShowPage(name);
+  _origSP(name);
   if(name === 'importar') {
-    var btnEx = document.getElementById('btnExportarAjustes');
-    if(btnEx) btnEx.onclick = function(){ exportarExcel(); };
-    var btnTrab = document.getElementById('btnExportarTrabajos');
-    if(btnTrab) btnTrab.onclick = function(){ exportarTrabajos(); };
-    var btnCop = document.getElementById('btnCopiaAjustes');
-    if(btnCop) btnCop.onclick = function(){ hacerCopia(); };
-    var btnRes = document.getElementById('btnRestaurarAjustes');
-    if(btnRes) btnRes.onclick = function(){ document.getElementById('fileInputRestore').click(); };
-    var btnMaq = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq) btnMaq.onclick = function(){ agregarMaquinaria(); };
+    setTimeout(function(){
+      var b;
+      b=document.getElementById('btnExportarAjustes'); if(b) b.onclick=function(){exportarExcel();};
+      b=document.getElementById('btnExportarTrabajos'); if(b) b.onclick=function(){exportarTrabajos();};
+      b=document.getElementById('btnCopiaAjustes'); if(b) b.onclick=function(){hacerCopia();};
+      b=document.getElementById('btnRestaurarAjustes'); if(b) b.onclick=function(){document.getElementById('fileInputRestore').click();};
+      b=document.getElementById('btnPlantilla'); if(b) b.onclick=function(){descargarPlantilla('sigpac');};
+    },50);
   }
   if(name === 'maquinaria') {
-    var btnMaq2 = document.getElementById('btnAnadirMaquinaria');
-    if(btnMaq2) btnMaq2.onclick = function(){ agregarMaquinaria(); };
+    setTimeout(function(){
+      var btn=document.getElementById('btnAnadirMaquinaria');
+      if(btn) btn.onclick=function(){
+        if(_editandoMaqId){
+          var nombre=document.getElementById('maqNombre').value.trim();
+          if(!nombre){toast('El nombre es obligatorio',true);return;}
+          var maq=DB.get(uk('maquinaria'),[]);
+          var idx=maq.findIndex(function(m){return m.id===_editandoMaqId;});
+          if(idx>=0){
+            maq[idx].nombre=nombre;
+            maq[idx].tipo=document.getElementById('maqTipo').value;
+            maq[idx].marca=document.getElementById('maqMarca').value.trim();
+            maq[idx].modelo=document.getElementById('maqModelo').value.trim();
+            DB.set(uk('maquinaria'),maq);
+          }
+          _editandoMaqId=null;
+          btn.textContent='+ Añadir maquina';
+          btn.removeAttribute('data-editando');
+          ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
+          document.getElementById('maqTipo').value='';
+          renderMaquinaria(); toast('Maquinaria actualizada ✔');
+        } else {
+          agregarMaquinaria();
+        }
+      };
+    },50);
   }
 };
+
+var _editandoMaqId = null;
+
+function editarMaquinaria(id) {
+  var maquinaria = DB.get(uk('maquinaria'),[]);
+  var m = maquinaria.find(function(x){return x.id===id;});
+  if(!m) return;
+  document.getElementById('maqNombre').value = m.nombre||'';
+  document.getElementById('maqTipo').value = m.tipo||'';
+  document.getElementById('maqMarca').value = m.marca||'';
+  document.getElementById('maqModelo').value = m.modelo||'';
+  _editandoMaqId = id;
+  var btn = document.getElementById('btnAnadirMaquinaria');
+  if(btn){ btn.textContent='✔ Guardar cambios'; btn.setAttribute('data-editando',id); }
+  document.getElementById('maqNombre').scrollIntoView({behavior:'smooth',block:'center'});
+  document.getElementById('maqNombre').focus();
+}
 
 renderLoginUsers();
 var lastId=DB.get('pac_lastUser',null);
 if(lastId){ entrarApp(lastId); }
-
-function capturarGPSParcela(parcelaId) {
-  mostrarModalGPS(parcelaId);
-}
-
-function mostrarModalGPS(parcelaId) {
-  var p = parcelas.find(function(x){ return x.id === parcelaId; });
-  var nombre = p ? p.nombre : '';
-  var existing = document.getElementById('modalGPS');
-  if (existing) existing.parentNode.removeChild(existing);
-  var div = document.createElement('div');
-  div.id = 'modalGPS';
-  div.className = 'modal-overlay open';
-  var html = '<div class="modal" style="max-height:88vh">';
-  html += '<div class="modal-title">&#128205; Ubicación de ' + nombre + '<button class="modal-close" id="btnCerrarGPS">X</button></div>';
-  html += '<div style="font-size:13px;color:#888;margin-bottom:14px">Abre el mapa, busca tu parcela, copia las coordenadas y pégalas aquí.</div>';
-  // Open maps buttons
-  html += '<div style="display:flex;gap:10px;margin-bottom:16px">';
-  html += '<button id="btnAbrirGoogleMaps" style="flex:1;padding:13px 8px;background:#4285F4;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#127760; Google Maps</button>';
-  html += '<button id="btnAbrirAppleMaps" style="flex:1;padding:13px 8px;background:#333;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#63743; Apple Maps</button>';
-  html += '</div>';
-  html += '<div style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.9">';
-  html += '<b>1.</b> Pulsa un botón de arriba para abrir el mapa<br>';
-  html += '<b>2.</b> Navega hasta tu parcela<br>';
-  html += '<b>3.</b> Mantén pulsado sobre ella<br>';
-  html += '<b>4.</b> Copia las coordenadas que aparecen<br>';
-  html += '<b>5.</b> Pégalas aquí abajo</div>';
-  html += '<label style="display:block;font-size:13px;font-weight:600;color:#666;margin-bottom:5px">Coordenadas</label>';
-  html += '<input type="text" id="gpsManualInput" placeholder="Ej: 41.652300, -4.123400" style="margin-bottom:4px">';
-  html += '<div style="font-size:11px;color:#aaa;margin-bottom:16px">Formato: latitud, longitud</div>';
-  html += '<button id="btnGuardarGPS" style="width:100%;padding:14px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128190; Guardar ubicación</button>';
-  html += '<button class="btn-secondary" id="btnCancelarGPS">Cancelar</button>';
-  html += '</div>';
-  div.innerHTML = html;
-  document.body.appendChild(div);
-
-  document.getElementById('btnCerrarGPS').onclick = function(){ div.parentNode.removeChild(div); };
-  document.getElementById('btnCancelarGPS').onclick = function(){ div.parentNode.removeChild(div); };
-  document.getElementById('btnAbrirGoogleMaps').onclick = function(){
-    window.location.href = 'https://www.google.com/maps';
-  };
-  document.getElementById('btnAbrirAppleMaps').onclick = function(){
-    window.location.href = 'https://maps.apple.com/';
-  };
-  document.getElementById('btnGuardarGPS').onclick = function(){
-    var val = document.getElementById('gpsManualInput').value.trim();
-    var parts = val.split(',');
-    if (parts.length < 2) { toast('Formato: latitud, longitud', true); return; }
-    var lat = parseFloat(parts[0]), lon = parseFloat(parts[1]);
-    if (isNaN(lat) || isNaN(lon)) { toast('Coordenadas no válidas', true); return; }
-    var idx = parcelas.findIndex(function(p){ return p.id === parcelaId; });
-    if (idx >= 0) {
-      parcelas[idx].gps = lat.toFixed(6) + ',' + lon.toFixed(6);
-      save(); div.parentNode.removeChild(div); renderParcelas();
-      toast('✔ Ubicación guardada');
-    }
-  };
-}
-
-function verEnMapa(gps) {
-  if (!gps) return;
-  var parts = gps.split(',');
-  if (parts.length < 2) return;
-  var lat = parts[0].trim(), lon = parts[1].trim();
-  var isApple = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  var url = isApple
-    ? 'maps://maps.apple.com/?ll=' + lat + ',' + lon + '&q=Parcela'
-    : 'https://www.google.com/maps?q=' + lat + ',' + lon;
-  // window.open blocked in WebView
-  window.location.href = url;
-}
 </script>
 </body>
 </html>
