@@ -295,6 +295,13 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <button id="btnCopiaAjustes" style="width:100%;padding:14px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#128190; Crear archivo de copia (.json)</button>
     <button id="btnRestaurarAjustes" style="width:100%;padding:14px;background:var(--azul-claro);color:var(--azul);border:1.5px solid #aed6f1;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Cargar archivo de copia</button>
   </div>
+  <!-- CAMPAÑAS -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--rojo)">
+    <div style="font-size:15px;font-weight:700;color:var(--rojo);margin-bottom:6px">&#128465; Gestionar campa&#241;as</div>
+    <div style="font-size:13px;color:#666;margin-bottom:14px">Elimina campa&#241;as que ya no necesites. Se borrar&#225;n todos sus cultivos y laboreos asociados.</div>
+    <div id="listaCampanasAjustes"></div>
+  </div>
+
   <div class="import-mode-tabs">
     <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
     <div class="import-mode-tab" id="modeTabCustom" onclick="setImportMode('custom')">Formato propio</div>
