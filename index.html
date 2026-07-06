@@ -1635,7 +1635,7 @@ function renderParcelas() {
       '</div><div class="card-actions">' +
       '<button class="btn-sm btn-edit parc-btn-editar" data-id="'+p.id+'">&#9998; Editar</button>' +
       '<button class="btn-sm btn-del parc-btn-borrar" data-id="'+p.id+'">&#128465; Eliminar</button>' +
-      (p.refSIGPAC?'<button class="btn-sm parc-btn-sigpac" data-id="'+p.id+'" style="background:var(--azul-claro);color:var(--azul)">&#128506; SIGPAC</button>':'') +
+      (p.gps?'<button class="btn-sm parc-btn-mapa" data-id="'+p.id+'" style="background:#fef3e2;color:#d35400">&#127757; Mapa</button>':'<button class="btn-sm parc-btn-gps" data-id="'+p.id+'" style="background:#fef3e2;color:#d35400">&#128205; Ubicación</button>') +
       '</div></div>';
   }
   cont.innerHTML = html;
@@ -1646,8 +1646,15 @@ function renderParcelas() {
   cont.querySelectorAll('.parc-btn-borrar').forEach(function(el){
     el.addEventListener('click', function(){ eliminarParcela(this.getAttribute('data-id')); });
   });
-  cont.querySelectorAll('.parc-btn-sigpac').forEach(function(el){
-    el.addEventListener('click', function(){ abrirSIGPAC(this.getAttribute('data-id')); });
+  cont.querySelectorAll('.parc-btn-gps').forEach(function(el){
+    el.addEventListener('click', function(e){ capturarGPSParcela(e.currentTarget.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.parc-btn-mapa').forEach(function(el){
+    el.addEventListener('click', function(e){
+      var pid=e.currentTarget.getAttribute('data-id');
+      var p=parcelas.find(function(x){return x.id===pid;});
+      if(p&&p.gps) verEnMapa(p.gps);
+    });
   });
 }
 
@@ -1716,17 +1723,6 @@ function eliminarParcela(id) {
   });
 }
 
-function abrirSIGPAC(parcelaId) {
-  var p=null;
-  for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===parcelaId){p=parcelas[i];break;}}
-  if(!p) return;
-  var url='https://sigpac.mapa.gob.es/fega/visor/';
-  if(p.refSIGPAC) {
-    var parts=p.refSIGPAC.split('-');
-    if(parts.length>=6) url='https://sigpac.mapa.gob.es/fega/visor/?cp='+parts[0]+'&cm='+parts[1]+'&agr='+(parts[2]||0)+'&zona='+(parts[3]||0)+'&pol='+parts[4]+'&par='+parts[5]+'&rec='+(parts[6]||1);
-  }
-  window.open(url,'_blank');
-}
 
 var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
 function renderSemillas() {
@@ -2461,6 +2457,129 @@ save = function() {
   _origSave();
   setTimeout(actualizarBadgeAlertas, 100);
 };
+
+function capturarGPSParcela(parcelaId) {
+  mostrarModalGPS(parcelaId);
+}
+
+function mostrarModalGPS(parcelaId) {
+  var p = parcelas.find(function(x){ return x.id === parcelaId; });
+  var nombre = p ? p.nombre : '';
+  var existing = document.getElementById('modalGPS');
+  if (existing) existing.parentNode.removeChild(existing);
+  var div = document.createElement('div');
+  div.id = 'modalGPS';
+  div.className = 'modal-overlay open';
+  var html = '<div class="modal" style="max-height:88vh">';
+  html += '<div class="modal-title">&#128205; ' + nombre + '<button class="modal-close" id="btnCerrarGPS">X</button></div>';
+  // GPS directo
+  html += '<button id="btnGPSDirecto" style="width:100%;padding:14px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;">&#128225; Usar GPS del dispositivo</button>';
+  html += '<div id="gpsDirectoStatus" style="font-size:12px;text-align:center;margin-bottom:14px;display:none"></div>';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div style="flex:1;height:1px;background:var(--borde)"></div><span style="font-size:12px;color:#aaa">o busca en el mapa</span><div style="flex:1;height:1px;background:var(--borde)"></div></div>';
+  // Abrir mapa
+  html += '<div style="display:flex;gap:10px;margin-bottom:16px">';
+  html += '<button id="btnAbrirGoogleMaps" style="flex:1;padding:13px 8px;background:#4285F4;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#127760; Google Maps</button>';
+  html += '<button id="btnAbrirAppleMaps" style="flex:1;padding:13px 8px;background:#333;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#63743; Apple Maps</button>';
+  html += '</div>';
+  html += '<div style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.9">';
+  html += '<b>1.</b> Abre un mapa y navega hasta tu parcela<br>';
+  html += '<b>2.</b> Mantén pulsado sobre ella<br>';
+  html += '<b>3.</b> Copia las coordenadas<br>';
+  html += '<b>4.</b> Pégalas aquí abajo</div>';
+  html += '<label style="display:block;font-size:13px;font-weight:600;color:#666;margin-bottom:5px">Coordenadas manuales</label>';
+  html += '<input type="text" id="gpsManualInput" placeholder="Ej: 41.652300, -4.123400" style="margin-bottom:4px">';
+  html += '<div style="font-size:11px;color:#aaa;margin-bottom:16px">Formato: latitud, longitud</div>';
+  html += '<button id="btnGuardarGPS" style="width:100%;padding:14px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128190; Guardar coordenadas</button>';
+  html += '<button class="btn-secondary" id="btnCancelarGPS">Cancelar</button>';
+  html += '</div>';
+  div.innerHTML = html;
+  document.body.appendChild(div);
+
+  document.getElementById('btnCerrarGPS').onclick = function(){ div.parentNode.removeChild(div); };
+  document.getElementById('btnCancelarGPS').onclick = function(){ div.parentNode.removeChild(div); };
+  document.getElementById('btnAbrirGoogleMaps').onclick = function(){ abrirEnlaceExterno('https://www.google.com/maps'); };
+  document.getElementById('btnAbrirAppleMaps').onclick = function(){ abrirEnlaceExterno('https://maps.apple.com/'); };
+
+  // GPS directo
+  document.getElementById('btnGPSDirecto').onclick = function(){
+    var statusDiv = document.getElementById('gpsDirectoStatus');
+    var btn = document.getElementById('btnGPSDirecto');
+    if (!navigator.geolocation) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.color = 'var(--rojo)';
+      statusDiv.textContent = '⚠️ GPS no disponible en este navegador';
+      return;
+    }
+    btn.textContent = '⏳ Obteniendo ubicación...';
+    btn.disabled = true;
+    statusDiv.style.display = 'none';
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        var lat = pos.coords.latitude.toFixed(6);
+        var lon = pos.coords.longitude.toFixed(6);
+        var acc = pos.coords.accuracy.toFixed(0);
+        var idx = parcelas.findIndex(function(p){ return p.id === parcelaId; });
+        if (idx >= 0) {
+          parcelas[idx].gps = lat + ',' + lon;
+          save(); div.parentNode.removeChild(div); renderParcelas();
+          toast('✔ Ubicación guardada (' + acc + 'm precisión)');
+        }
+      },
+      function(err) {
+        btn.textContent = '&#128225; Usar GPS del dispositivo';
+        btn.disabled = false;
+        statusDiv.style.display = 'block';
+        statusDiv.style.color = 'var(--rojo)';
+        if (err.code === 1) {
+          statusDiv.innerHTML = '⚠️ Permiso denegado. Ve a los ajustes de tu dispositivo y permite el acceso a la ubicación para esta app.';
+        } else if (err.code === 2) {
+          statusDiv.textContent = '⚠️ Sin señal GPS. Sal al exterior e inténtalo de nuevo.';
+        } else {
+          statusDiv.textContent = '⚠️ Tiempo agotado. Inténtalo de nuevo.';
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  // Guardar coordenadas manuales
+  document.getElementById('btnGuardarGPS').onclick = function(){
+    var val = document.getElementById('gpsManualInput').value.trim();
+    var parts = val.split(',');
+    if (parts.length < 2) { toast('Formato: latitud, longitud', true); return; }
+    var lat = parseFloat(parts[0]), lon = parseFloat(parts[1]);
+    if (isNaN(lat) || isNaN(lon)) { toast('Coordenadas no válidas', true); return; }
+    var idx = parcelas.findIndex(function(p){ return p.id === parcelaId; });
+    if (idx >= 0) {
+      parcelas[idx].gps = lat.toFixed(6) + ',' + lon.toFixed(6);
+      save(); div.parentNode.removeChild(div); renderParcelas();
+      toast('✔ Ubicación guardada');
+    }
+  };
+}
+
+function verEnMapa(gps) {
+  if (!gps) return;
+  var parts = gps.split(',');
+  if (parts.length < 2) return;
+  var lat = parts[0].trim(), lon = parts[1].trim();
+  var isApple = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var url = isApple
+    ? 'maps://maps.apple.com/?ll=' + lat + ',' + lon + '&q=Parcela'
+    : 'https://www.google.com/maps?q=' + lat + ',' + lon;
+  abrirEnlaceExterno(url);
+}
+
+function abrirEnlaceExterno(url) {
+  var a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ document.body.removeChild(a); }, 500);
+}
 </script>
 </body>
 </html>
