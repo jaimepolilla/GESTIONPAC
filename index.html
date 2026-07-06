@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3d6b2f">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -568,6 +568,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     </div>
     <div id="modalExportarDesc" style="font-size:13px;color:#888;margin-bottom:14px">Selecciona la campaña</div>
     <div id="exportCampanaList"></div>
+  </div>
+</div>
+
+<!-- MODAL ALERTAS PAC -->
+<div class="modal-overlay" id="modalAlertas">
+  <div class="modal" style="max-height:85vh">
+    <div class="modal-title">&#128276; Alertas PAC
+      <button class="modal-close" onclick="cerrarModal('modalAlertas')">X</button>
+    </div>
+    <div id="alertasContenido"></div>
   </div>
 </div>
 
@@ -2283,6 +2293,174 @@ function editarMaquinaria(id) {
 renderLoginUsers();
 var lastId=DB.get('pac_lastUser',null);
 if(lastId){ entrarApp(lastId); }
+
+function calcularAlertasPAC() {
+  var alertas = [];
+  if (!parcelas.length || !campanas.length) return alertas;
+
+  // Get sorted campaigns
+  var camps = campanas.slice().sort();
+
+  // Total hectares of the explotacion
+  var haTotal = 0;
+  for (var i = 0; i < parcelas.length; i++) haTotal += parseFloat(parcelas[i].superficie) || 0;
+
+  // Check exemptions
+  var exento10ha = haTotal < 10;
+
+  // Check if >75% is forraje/pastos
+  var haForraje = 0;
+  for (var i = 0; i < declaraciones.length; i++) {
+    var d = declaraciones[i];
+    var cat = (d.categoria || '').toLowerCase();
+    if (cat === 'forraje' || cat === 'barbecho') haForraje += parseFloat(d.superficie) || 0;
+  }
+  var exentoForraje = haTotal > 0 && (haForraje / haTotal) > 0.75;
+
+  if (exento10ha) {
+    return [{ tipo: 'info', titulo: 'Explotación exenta', mensaje: 'Tu explotación es menor de 10 ha, no estás obligado a la rotación de cultivos.', parcela: null }];
+  }
+  if (exentoForraje) {
+    return [{ tipo: 'info', titulo: 'Explotación exenta', mensaje: 'Más del 75% de tu superficie es forraje/pastos, no estás obligado a la rotación.', parcela: null }];
+  }
+
+  // Cultivos permanentes (no rotan)
+  var cultivosPermanentes = ['alfalfa', 'viña', 'viñedo', 'olivo', 'almendro', 'frutal'];
+
+  // For each parcel, check rotation across last 3 campaigns
+  for (var pi = 0; pi < parcelas.length; pi++) {
+    var p = parcelas[pi];
+    var historial = {}; // campana -> cultivo
+
+    for (var di = 0; di < declaraciones.length; di++) {
+      var d = declaraciones[di];
+      if (d.parcelaId === p.id && d.cultivo) {
+        historial[d.campana] = (d.cultivo || '').toLowerCase();
+      }
+    }
+
+    var campsConDatos = camps.filter(function(c){ return historial[c]; });
+    if (campsConDatos.length < 2) continue; // Not enough data
+
+    // Check if permanent crop
+    var ultimoCultivo = historial[campsConDatos[campsConDatos.length - 1]] || '';
+    var esPermanente = cultivosPermanentes.some(function(cp){ return ultimoCultivo.indexOf(cp) >= 0; });
+    if (esPermanente) continue;
+
+    // Check last 3 campaigns for same crop
+    var last3 = campsConDatos.slice(-3);
+    if (last3.length >= 3) {
+      var primero = historial[last3[0]];
+      var todoIgual = last3.every(function(c){ return historial[c] === primero; });
+      if (todoIgual) {
+        alertas.push({
+          tipo: 'error',
+          titulo: '⚠️ Rotación obligatoria: ' + p.nombre,
+          mensaje: 'Lleva ' + last3.length + ' campañas con el mismo cultivo (' + primero + '). ' +
+            'Según la PAC debes cambiar de cultivo en la próxima campaña.',
+          parcela: p.nombre
+        });
+      }
+    } else if (last3.length === 2) {
+      var mismoUltimos2 = historial[last3[0]] === historial[last3[1]];
+      if (mismoUltimos2) {
+        alertas.push({
+          tipo: 'warning',
+          titulo: '⏰ Aviso rotación: ' + p.nombre,
+          mensaje: 'Lleva 2 campañas con ' + historial[last3[0]] + '. Si repite el próximo año deberá rotar.',
+          parcela: p.nombre
+        });
+      }
+    }
+  }
+
+  // Diversification check (>30ha need 3+ crops, 10-30ha need 2+ crops)
+  if (campanaActual) {
+    var cultivosActuales = {};
+    var haDeclaradas = 0;
+    for (var di = 0; di < declaraciones.length; di++) {
+      var d = declaraciones[di];
+      if (d.campana === campanaActual && d.cultivo) {
+        var cul = (d.cultivo || '').toLowerCase();
+        cultivosActuales[cul] = (cultivosActuales[cul] || 0) + (parseFloat(d.superficie) || 0);
+        haDeclaradas += parseFloat(d.superficie) || 0;
+      }
+    }
+    var numCultivos = Object.keys(cultivosActuales).length;
+
+    if (haDeclaradas >= 30 && numCultivos < 3) {
+      alertas.push({
+        tipo: 'error',
+        titulo: '⚠️ Diversificación insuficiente',
+        mensaje: 'Con más de 30 ha necesitas al menos 3 cultivos distintos. Tienes ' + numCultivos + ' en la campaña ' + campanaActual + '.',
+        parcela: null
+      });
+    } else if (haDeclaradas >= 10 && numCultivos < 2) {
+      alertas.push({
+        tipo: 'warning',
+        titulo: '⏰ Diversificación: ' + p.nombre,
+        mensaje: 'Con entre 10 y 30 ha necesitas al menos 2 cultivos distintos. Tienes ' + numCultivos + ' en la campaña ' + campanaActual + '.',
+        parcela: null
+      });
+    }
+  }
+
+  if (!alertas.length) {
+    alertas.push({ tipo: 'ok', titulo: '✅ Sin alertas', mensaje: 'No se han detectado incumplimientos de rotación o diversificación en tu explotación.', parcela: null });
+  }
+
+  return alertas;
+}
+
+function actualizarBadgeAlertas() {
+  var alertas = calcularAlertasPAC();
+  var errores = alertas.filter(function(a){ return a.tipo === 'error'; }).length;
+  var warnings = alertas.filter(function(a){ return a.tipo === 'warning'; }).length;
+  var badge = document.getElementById('alertaBadge');
+  if (!badge) return;
+  var total = errores + warnings;
+  if (total > 0) {
+    badge.textContent = total;
+    badge.style.display = 'block';
+    badge.style.background = errores > 0 ? '#e74c3c' : '#f39c12';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function mostrarAlertas() {
+  var alertas = calcularAlertasPAC();
+  var html = '';
+
+  // Summary box
+  var errores = alertas.filter(function(a){ return a.tipo==='error'; }).length;
+  var warnings = alertas.filter(function(a){ return a.tipo==='warning'; }).length;
+  html += '<div style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#555;line-height:1.7">';
+  html += '<b>Norma PAC — Rotación de cultivos:</b><br>';
+  html += '• Cambiar cultivo cada 3 años como míximo<br>';
+  html += '• Exentos: &lt;10 ha, &gt;75% forraje/pastos, cultivos permanentes';
+  html += '</div>';
+
+  for (var i = 0; i < alertas.length; i++) {
+    var a = alertas[i];
+    var color = a.tipo === 'error' ? '#e74c3c' : a.tipo === 'warning' ? '#f39c12' : '#27ae60';
+    var bg = a.tipo === 'error' ? '#fdf0ef' : a.tipo === 'warning' ? '#fef9e7' : '#eafaf1';
+    html += '<div style="border-left:4px solid ' + color + ';background:' + bg + ';border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:10px;">';
+    html += '<div style="font-weight:700;color:' + color + ';margin-bottom:4px">' + a.titulo + '</div>';
+    html += '<div style="font-size:13px;color:#555">' + a.mensaje + '</div>';
+    html += '</div>';
+  }
+
+  document.getElementById('alertasContenido').innerHTML = html;
+  document.getElementById('modalAlertas').classList.add('open');
+}
+
+// Update badge when data changes
+var _origSave = save;
+save = function() {
+  _origSave();
+  setTimeout(actualizarBadgeAlertas, 100);
+};
 </script>
 </body>
 </html>
