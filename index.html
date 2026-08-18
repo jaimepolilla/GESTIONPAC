@@ -79,6 +79,7 @@
     el.innerHTML = map[status] || map.offline;
   }
   window._setSyncStatus = setSyncStatus;
+  window._getDB = function() { return _db; };
 
   function _cacheLocally(uid, data) {
     if (!uid || !window._LS) return;
@@ -729,13 +730,31 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 
 <!-- MODAL PERFIL -->
 <div class="modal-overlay" id="modalPerfil">
-  <div class="modal" style="max-height:50vh">
-    <div class="modal-title"><span id="perfilNombreTitle">Mi perfil</span><button class="modal-close" onclick="cerrarModal('modalPerfil')">X</button></div>
-    <div style="text-align:center;padding:10px 0 16px">
-      <div id="perfilAvatar" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:white;margin:0 auto 10px"></div>
-      <div id="perfilNombreGrande" style="font-size:20px;font-weight:700"></div>
+  <div class="modal" style="max-height:85vh">
+    <div class="modal-title"><span id="perfilNombreTitle">Mi perfil</span><button class="modal-close" onclick="cerrarModal('modalPerfil')">✕</button></div>
+
+    <!-- Avatar con foto -->
+    <div style="text-align:center;padding:10px 0 20px">
+      <div style="position:relative;display:inline-block;cursor:pointer" onclick="document.getElementById('inputFotoPerfil').click()">
+        <div id="perfilAvatar" style="width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:white;margin:0 auto;overflow:hidden;position:relative"></div>
+        <div style="position:absolute;bottom:0;right:0;background:var(--verde);color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white">📷</div>
+      </div>
+      <input type="file" id="inputFotoPerfil" accept="image/*" style="display:none" onchange="subirFotoPerfil(event)">
+      <div id="perfilNombreGrande" style="font-size:20px;font-weight:700;margin-top:10px"></div>
+      <div id="perfilRolBadge" style="font-size:12px;color:#888;margin-top:2px"></div>
     </div>
-    <button class="btn-danger" id="btnCerrarSesion">Cerrar sesion</button>
+
+    <!-- Cambiar contraseña -->
+    <div style="border-top:1px solid var(--borde);padding-top:16px;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">🔑 Cambiar contraseña</div>
+      <input type="password" id="perfilPassActual" placeholder="Contraseña actual" maxlength="50" style="margin-bottom:8px">
+      <input type="password" id="perfilPassNueva" placeholder="Nueva contraseña" maxlength="50" style="margin-bottom:8px">
+      <input type="password" id="perfilPassRepite" placeholder="Repetir nueva contraseña" maxlength="50" style="margin-bottom:8px">
+      <div id="perfilPassError" style="color:var(--rojo);font-size:13px;min-height:16px;margin-bottom:8px"></div>
+      <button onclick="cambiarContrasena()" style="width:100%;padding:12px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">Guardar nueva contraseña</button>
+    </div>
+
+    <button class="btn-danger" id="btnCerrarSesion" style="margin-top:12px">Cerrar sesión</button>
     <button class="btn-secondary" id="btnCancelarPerfil">Cancelar</button>
   </div>
 </div>
@@ -902,6 +921,12 @@ window._reloadUserData = function(data) {
   if (usuarioActual) {
     DB.set(uk('maquinaria'), data.maquinaria || []);
     DB.set(uk('laboreos'),   data.laboreos   || []);
+    // Cargar foto de perfil si existe en Firestore
+    if (data._foto) {
+      usuarioActual.foto = data._foto;
+      _LS.set('pac_foto_' + usuarioActual.id, data._foto);
+      _renderPerfilAvatar && _renderPerfilAvatar();
+    }
   }
 };
 setTimeout(function(){
@@ -948,6 +973,7 @@ window._buildPayload = function() {
     _nombre_display: usuarioActual.nombre||'',
     _colorIdx:       usuarioActual.colorIdx||0,
     _ts:             Date.now(),
+    _foto:           usuarioActual.foto || _LS.get('pac_foto_' + usuarioActual.id, null) || null,
     campanaActual:   campanaActual,
     campanas:        campanas,
     parcelas:        parcelas,
@@ -1105,6 +1131,14 @@ function entrarApp(u) {
   var av = document.getElementById('headerAvatar');
   av.textContent = u.nombre.charAt(0).toUpperCase();
   av.className = 'header-avatar av-' + ((u.colorIdx || 0) % 6);
+  // Cargar foto cacheada si existe
+  var fotoCache = _LS.get('pac_foto_' + u.id, null);
+  if (fotoCache) {
+    u.foto = fotoCache;
+    av.style.background = 'none';
+    av.style.padding = '0';
+    av.innerHTML = '<img src="' + fotoCache + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+  }
 
   // Ocultar tabs que el trabajador no puede ver
   _aplicarPermisos();
@@ -1166,10 +1200,121 @@ function abrirPerfil() {
   var u = usuarioActual;
   document.getElementById('perfilNombreTitle').textContent = u.nombre;
   document.getElementById('perfilNombreGrande').textContent = u.nombre;
-  var av = document.getElementById('perfilAvatar');
-  av.textContent = u.nombre.charAt(0).toUpperCase();
-  av.className = 'av-' + (u.colorIdx % 6);
+  document.getElementById('perfilRolBadge').textContent = rolActual === 'worker' ? '👷 Trabajador' : '👑 Propietario';
+  // Limpiar campos contraseña
+  ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('perfilPassError').textContent = '';
+  // Renderizar avatar
+  _renderPerfilAvatar();
   document.getElementById('modalPerfil').classList.add('open');
+}
+
+function _renderPerfilAvatar() {
+  var u = usuarioActual;
+  var av = document.getElementById('perfilAvatar');
+  var foto = u.foto || _LS.get('pac_foto_' + u.id, null);
+  if (foto) {
+    av.style.background = 'none';
+    av.innerHTML = '<img src="' + foto + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+  } else {
+    av.innerHTML = u.nombre.charAt(0).toUpperCase();
+    av.className = 'av-' + ((u.colorIdx || 0) % 6);
+    av.style.background = '';
+  }
+  // También actualizar header avatar
+  var hav = document.getElementById('headerAvatar');
+  if (hav) {
+    if (foto) {
+      hav.style.background = 'none';
+      hav.style.padding = '0';
+      hav.innerHTML = '<img src="' + foto + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    } else {
+      hav.innerHTML = u.nombre.charAt(0).toUpperCase();
+      hav.className = 'header-avatar av-' + ((u.colorIdx || 0) % 6);
+      hav.style.background = '';
+    }
+  }
+}
+
+function subirFotoPerfil(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // Redimensionar a 100x100 con canvas
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = 100; canvas.height = 100;
+      var ctx = canvas.getContext('2d');
+      // Recorte centrado
+      var size = Math.min(img.width, img.height);
+      var sx = (img.width - size) / 2;
+      var sy = (img.height - size) / 2;
+      ctx.drawImage(img, sx, sy, size, size, 0, 0, 100, 100);
+      var base64 = canvas.toDataURL('image/jpeg', 0.7);
+      // Guardar en localStorage y en Firebase
+      usuarioActual.foto = base64;
+      _LS.set('pac_foto_' + usuarioActual.id, base64);
+      // Guardar en Firestore en el documento del usuario
+      if (window._saveToFirestore) {
+        // Añadir foto al payload
+        var oldBuild = window._buildPayload;
+        window._buildPayload = function() {
+          var p = oldBuild();
+          if (p) p._foto = base64;
+          window._buildPayload = oldBuild; // restaurar
+          return p;
+        };
+        window._saveToFirestore();
+      }
+      _renderPerfilAvatar();
+      toast('Foto actualizada ✔');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function cambiarContrasena() {
+  var actual  = document.getElementById('perfilPassActual').value.trim();
+  var nueva   = document.getElementById('perfilPassNueva').value.trim();
+  var repite  = document.getElementById('perfilPassRepite').value.trim();
+  var errEl   = document.getElementById('perfilPassError');
+
+  if (!actual)  { errEl.textContent = 'Escribe tu contraseña actual'; return; }
+  if (!nueva || nueva.length < 4) { errEl.textContent = 'La nueva contraseña debe tener al menos 4 caracteres'; return; }
+  if (nueva !== repite) { errEl.textContent = 'Las contraseñas no coinciden'; return; }
+
+  errEl.textContent = '';
+  hashPassword(actual).then(function(hashActual) {
+    // Verificar contraseña actual contra Firestore
+    var uid = ownerIdActual || usuarioActual.id;
+    var db = window._getDB ? window._getDB() : null;
+    if (!db) { errEl.textContent = 'Sin conexión a Firebase'; return; }
+
+    var colRef = rolActual === 'worker'
+      ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
+      : db.collection('pac_users').doc(usuarioActual.id);
+
+    colRef.get().then(function(snap) {
+      if (!snap.exists) { errEl.textContent = 'Usuario no encontrado'; return; }
+      var data = snap.data();
+      if (data._passHash && data._passHash !== hashActual) {
+        errEl.textContent = 'Contraseña actual incorrecta';
+        return;
+      }
+      hashPassword(nueva).then(function(hashNueva) {
+        colRef.update({ _passHash: hashNueva }).then(function() {
+          ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
+          toast('Contraseña actualizada ✔');
+        }).catch(function() {
+          errEl.textContent = 'Error al guardar. Inténtalo de nuevo.';
+        });
+      });
+    });
+  });
 }
 
 function cerrarSesionConfirm() {
