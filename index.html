@@ -15,13 +15,16 @@
 <title>PAC Gestion</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Firebase SDK compat -->
-<script>window._firebaseAppLoaded = false; window._firebaseFirestoreLoaded = false;</script>
+<script>window._firebaseAppLoaded = false; window._firebaseFirestoreLoaded = false; window._firebaseAuthLoaded = false;</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"
   onload="window._firebaseAppLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
   onerror="console.error('firebase-app-compat.js falló al cargar')"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"
   onload="window._firebaseFirestoreLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
   onerror="console.error('firebase-firestore-compat.js falló al cargar')"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"
+  onload="window._firebaseAuthLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
+  onerror="console.error('firebase-auth-compat.js falló al cargar')"></script>
 <script>
 (function() {
   var FIREBASE_CONFIG = {
@@ -39,28 +42,65 @@
   var _lastSavedHash = '';
 
   // Inicializar solo cuando ambos SDKs hayan cargado
-  window._tryInitFirebase = function() {
-    if (!window._firebaseAppLoaded || !window._firebaseFirestoreLoaded) return;
-    if (_db) return; // ya inicializado
-    try {
-      if (typeof firebase === 'undefined') {
-        console.error('Firebase SDK no cargado');
-        return;
-      }
-      firebase.initializeApp(FIREBASE_CONFIG);
-      _db = firebase.firestore();
-      console.log('Firebase listo');
-    } catch(e) {
-      console.error('Firebase init error:', e);
-    }
-  };
+  var _auth = null;
 
-  // También intentar en DOMContentLoaded por si los onload ya dispararon antes
+  window._tryInitFirebase = function() {
+    if (!window._firebaseAppLoaded || !window._firebaseFirestoreLoaded || !window._firebaseAuthLoaded) return;
+    if (_db) return;
+    try {
+      if (typeof firebase === 'undefined') { console.error('Firebase SDK no cargado'); return; }
+      firebase.initializeApp(FIREBASE_CONFIG);
+      _db   = firebase.firestore();
+      _auth = firebase.auth();
+      // Configurar idioma español para emails de recuperación
+      _auth.languageCode = 'es';
+      console.log('Firebase listo');
+    } catch(e) { console.error('Firebase init error:', e); }
+  };
+  window._getAuth = function() { return _auth; };
+
+  // DOMContentLoaded fallback
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', window._tryInitFirebase);
   } else {
     window._tryInitFirebase();
   }
+
+  // ── FIREBASE AUTH HELPERS ─────────────────────────────────────────
+
+  // Crear cuenta Auth (email + contraseña)
+  window._authCreateUser = function(email, password) {
+    if (!_auth) return Promise.resolve(null);
+    return _auth.createUserWithEmailAndPassword(email, password)
+      .then(function(cred) { return cred.user.uid; })
+      .catch(function(e) { console.error('authCreate error:', e); return null; });
+  };
+
+  // Vincular email Auth a usuario existente (si ya tiene cuenta)
+  window._authSignIn = function(email, password) {
+    if (!_auth) return Promise.resolve(null);
+    return _auth.signInWithEmailAndPassword(email, password)
+      .then(function(cred) { return cred.user; })
+      .catch(function() { return null; });
+  };
+
+  // Enviar email de recuperación de contraseña
+  window._authSendPasswordReset = function(email) {
+    if (!_auth) return Promise.resolve(false);
+    return _auth.sendPasswordResetEmail(email)
+      .then(function() { return true; })
+      .catch(function(e) {
+        console.error('passwordReset error:', e);
+        return false;
+      });
+  };
+
+  // Eliminar cuenta Auth
+  window._authDeleteUser = function(uid) {
+    // No podemos eliminar otros usuarios desde el cliente sin Admin SDK
+    // Se deja como no-op; el acceso queda bloqueado al borrar de Firestore
+    return Promise.resolve();
+  };
 
   function _hash(obj) {
     var s = JSON.stringify(obj) || '';
@@ -224,7 +264,7 @@
   }
 
   // Crear trabajador en subcolección workers del propietario
-  window._createWorker = function(ownerId, nombre, passHash, colorIdx) {
+  window._createWorker = function(ownerId, nombre, passHash, email, colorIdx, authUid) {
     if (!_db) return Promise.resolve(null);
     var id = Date.now().toString() + Math.random().toString(36).slice(2);
     return _db.collection('pac_users').doc(ownerId)
@@ -232,10 +272,20 @@
         _nombre:         nombre.toLowerCase().trim(),
         _nombre_display: nombre.trim(),
         _passHash:       passHash,
+        _email:          email || null,
+        _authUid:        authUid || null,
         _colorIdx:       colorIdx,
         _ts:             Date.now()
       }).then(function(){ return id; })
         .catch(function(e){ console.error('createWorker error:', e); return null; });
+  };
+
+  // Resetear contraseña de trabajador por email
+  window._resetWorkerPassword = function(email) {
+    if (!_auth || !email) return Promise.resolve(false);
+    return _auth.sendPasswordResetEmail(email)
+      .then(function() { return true; })
+      .catch(function() { return false; });
   };
 
   // Listar trabajadores de un propietario
@@ -257,12 +307,15 @@
   };
 
   // Crear propietario nuevo en Firestore
-  window._createUserInFirestore = function(nombre, colorIdx) {
+  window._createUserInFirestore = function(nombre, passHash, email, colorIdx, authUid) {
     if (!_db) return Promise.resolve(null);
     var id = Date.now().toString() + Math.random().toString(36).slice(2);
     return _db.collection('pac_users').doc(id).set({
       _nombre:         nombre.toLowerCase().trim(),
       _nombre_display: nombre.trim(),
+      _passHash:       passHash,
+      _email:          email || null,
+      _authUid:        authUid || null,
       _colorIdx:       colorIdx,
       _ts:             Date.now(),
       campanaActual: '', campanas: [], parcelas: [], semillas: [],
@@ -455,14 +508,35 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       autocomplete="current-password"
       onkeydown="if(event.key==='Enter')loginPorNombre()"
       oninput="document.getElementById('loginError').textContent=''">
+    <!-- Email solo para usuarios nuevos -->
+    <div id="loginEmailWrap" style="display:none">
+      <label style="margin-top:12px">Email <span style="font-weight:400;color:#aaa">(para recuperar contraseña)</span></label>
+      <input type="email" id="loginEmail" placeholder="tucorreo@email.com" maxlength="100" autocomplete="email">
+    </div>
     <div id="loginError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
     <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorNombre()" style="margin-top:14px">Entrar</button>
-    <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:12px;min-height:20px"></div>
-    <!-- Accesos recientes -->
+    <button class="btn-link" onclick="mostrarRecuperarContrasena()" style="display:block;margin:10px auto 0">¿Olvidaste tu contraseña?</button>
+    <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:8px;min-height:20px"></div>
     <div id="loginRecientes" style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;display:none">
       <div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:10px">Acceso reciente</div>
       <div id="loginRecientesList"></div>
     </div>
+  </div>
+</div>
+
+<!-- RECUPERAR CONTRASEÑA -->
+<div class="screen" id="screenRecuperar">
+  <div class="screen-logo">&#128273;</div>
+  <div class="screen-title">Recuperar contraseña</div>
+  <div class="screen-sub">Te enviaremos un enlace a tu email</div>
+  <div style="width:100%;max-width:380px">
+    <label>Email</label>
+    <input type="email" id="recuperarEmail" placeholder="tucorreo@email.com" maxlength="100"
+      autocomplete="email" onkeydown="if(event.key==='Enter')enviarRecuperacion()">
+    <div id="recuperarError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
+    <div id="recuperarOk" style="color:var(--verde);font-size:13px;min-height:18px;margin-top:6px;display:none">&#10003; Email enviado. Revisa tu bandeja de entrada.</div>
+    <button class="btn-primary" onclick="enviarRecuperacion()" style="margin-top:14px">Enviar enlace</button>
+    <button class="btn-secondary" onclick="showScreen('screenLogin')">Volver al login</button>
   </div>
 </div>
 
@@ -577,6 +651,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">Añadir trabajador</div>
       <input type="text" id="workerNombre" placeholder="Nombre del trabajador" maxlength="30" style="margin-bottom:8px">
       <input type="password" id="workerPass" placeholder="Contraseña para el trabajador" maxlength="50" style="margin-bottom:8px">
+      <input type="email" id="workerEmail" placeholder="Email del trabajador (para recuperar contraseña)" maxlength="100" style="margin-bottom:8px">
       <button onclick="crearTrabajador()" style="width:100%;padding:12px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear trabajador</button>
       <div id="workerError" style="color:var(--rojo);font-size:13px;margin-top:6px;min-height:16px"></div>
     </div>
@@ -743,6 +818,15 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       <input type="file" id="inputFotoPerfil" accept="image/*" style="display:none" onchange="subirFotoPerfil(event)">
       <div id="perfilNombreGrande" style="font-size:20px;font-weight:700;margin-top:10px"></div>
       <div id="perfilRolBadge" style="font-size:12px;color:#888;margin-top:2px"></div>
+    </div>
+
+    <!-- Email -->
+    <div style="border-top:1px solid var(--borde);padding-top:16px;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">📧 Email de recuperación</div>
+      <div id="perfilEmailActual" style="font-size:13px;color:#888;margin-bottom:8px"></div>
+      <input type="email" id="perfilEmailNuevo" placeholder="tucorreo@email.com" maxlength="100" autocomplete="email" style="margin-bottom:8px">
+      <div id="perfilEmailError" style="color:var(--rojo);font-size:13px;min-height:16px;margin-bottom:6px"></div>
+      <button onclick="guardarEmailPerfil()" style="width:100%;padding:12px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">Guardar email</button>
     </div>
 
     <!-- Cambiar contraseña -->
@@ -918,15 +1002,16 @@ window._reloadUserData = function(data) {
   parcelas      = data.parcelas      || [];
   semillas      = data.semillas      || [];
   declaraciones = data.declaraciones || [];
-  // Actualizar caché local también para maquinaria y laboreos
   if (usuarioActual) {
     DB.set(uk('maquinaria'), data.maquinaria || []);
     DB.set(uk('laboreos'),   data.laboreos   || []);
+    // Cargar email del usuario desde Firestore
+    if (data._email !== undefined) usuarioActual._email = data._email;
     // Cargar foto de perfil si existe en Firestore
     if (data._foto) {
       usuarioActual.foto = data._foto;
       _LS.set('pac_foto_' + usuarioActual.id, data._foto);
-      _renderPerfilAvatar && _renderPerfilAvatar();
+      if (typeof _renderPerfilAvatar === 'function') _renderPerfilAvatar();
     }
   }
 };
@@ -1068,6 +1153,30 @@ function renderLoginUsers() {
   });
 }
 
+function mostrarRecuperarContrasena() {
+  document.getElementById('recuperarEmail').value = '';
+  document.getElementById('recuperarError').textContent = '';
+  document.getElementById('recuperarOk').style.display = 'none';
+  showScreen('screenRecuperar');
+}
+
+function enviarRecuperacion() {
+  var email = (document.getElementById('recuperarEmail').value || '').trim();
+  var errEl = document.getElementById('recuperarError');
+  var okEl  = document.getElementById('recuperarOk');
+  if (!email || !email.includes('@')) { errEl.textContent = 'Introduce un email válido'; return; }
+  errEl.textContent = '';
+  if (!window._authSendPasswordReset) { errEl.textContent = 'Sin conexión a Firebase'; return; }
+  window._authSendPasswordReset(email).then(function(ok) {
+    if (ok) {
+      okEl.style.display = '';
+      errEl.textContent = '';
+    } else {
+      errEl.textContent = 'No se encontró ninguna cuenta con ese email. Contacta con el propietario.';
+    }
+  });
+}
+
 function loginPorNombre() {
   var nombre = (document.getElementById('loginNombre').value || '').trim();
   var pass   = (document.getElementById('loginPass').value   || '').trim();
@@ -1090,26 +1199,66 @@ function loginPorNombre() {
     }
     window._lookupUserByName(nombre, passHash).then(function(resultado) {
       btn.disabled = false; status.textContent = '';
+
       if (!resultado) {
-        errEl.textContent = 'Usuario o contraseña incorrectos';
+        // Usuario no existe → mostrar campo email para registro
+        var emailWrap = document.getElementById('loginEmailWrap');
+        if (emailWrap.style.display === 'none') {
+          emailWrap.style.display = '';
+          errEl.textContent = 'Usuario nuevo. Añade tu email para poder recuperar la contraseña.';
+          errEl.style.color = 'var(--naranja)';
+          document.getElementById('loginEmail').focus();
+          btn.disabled = false;
+          return;
+        }
+        // Segunda pulsación con email → crear usuario
+        var email = (document.getElementById('loginEmail').value || '').trim();
+        errEl.style.color = 'var(--rojo)';
+        status.textContent = '🆕 Creando usuario…';
+        btn.disabled = true;
+        var colorIdx = Math.floor(Math.random() * 6);
+        _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx);
         return;
       }
+
       if (resultado === 'wrong_password') {
         errEl.textContent = 'Contraseña incorrecta';
         return;
       }
+
+      errEl.style.color = 'var(--rojo)';
       // Login correcto
       var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== resultado.nombre.toLowerCase(); });
       recientes.unshift({ nombre: resultado.nombre, colorIdx: resultado.colorIdx || 0 });
       _LS.set('pac_recientes', recientes.slice(0, 3));
-      // Si es trabajador, guardar referencia al propietario
-      if (resultado.rol === 'worker') {
-        _LS.set('pac_lastUser', resultado.ownerId + '|worker|' + resultado.id);
-      } else {
-        _LS.set('pac_lastUser', resultado.id);
-      }
+      _LS.set('pac_lastUser', resultado.id);
       entrarApp(resultado);
     });
+  });
+}
+
+function _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx) {
+  var status = document.getElementById('loginStatus');
+  var errEl  = document.getElementById('loginError');
+  var btn    = document.getElementById('btnLoginEntrar');
+
+  // Crear en Firebase Auth si hay email
+  var authPromise = (email && window._authCreateUser)
+    ? window._authCreateUser(email, pass)
+    : Promise.resolve(null);
+
+  authPromise.then(function(uid) {
+    if (window._createUserInFirestore) {
+      window._createUserInFirestore(nombre, passHash, email, colorIdx, uid).then(function(newId) {
+        btn.disabled = false; status.textContent = '';
+        if (!newId) { errEl.textContent = 'Error al crear usuario'; return; }
+        var u = { id: newId, nombre: nombre, colorIdx: colorIdx, rol: 'owner' };
+        var recientes = _LS.get('pac_recientes', []);
+        recientes.unshift({ nombre: nombre, colorIdx: colorIdx });
+        _LS.set('pac_recientes', recientes.slice(0, 3));
+        entrarApp(u);
+      });
+    }
   });
 }
 
@@ -1302,9 +1451,48 @@ function abrirPerfil() {
   // Limpiar campos contraseña
   ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('perfilPassError').textContent = '';
+  // Email actual
+  var emailActual = u._email || u.email || null;
+  var emailActualEl = document.getElementById('perfilEmailActual');
+  var emailNuevoEl  = document.getElementById('perfilEmailNuevo');
+  var emailErrorEl  = document.getElementById('perfilEmailError');
+  emailActualEl.textContent = emailActual ? '📧 Email actual: ' + emailActual : 'Sin email registrado';
+  emailNuevoEl.value = emailActual || '';
+  emailErrorEl.textContent = '';
   // Renderizar avatar
   _renderPerfilAvatar();
   document.getElementById('modalPerfil').classList.add('open');
+}
+
+function guardarEmailPerfil() {
+  var email    = (document.getElementById('perfilEmailNuevo').value || '').trim();
+  var errEl    = document.getElementById('perfilEmailError');
+  var actualEl = document.getElementById('perfilEmailActual');
+
+  if (email && !email.includes('@')) { errEl.textContent = 'Email no válido'; return; }
+  errEl.textContent = '';
+
+  var db = window._getDB ? window._getDB() : null;
+  if (!db) { errEl.textContent = 'Sin conexión a Firebase'; return; }
+
+  // Determinar el documento a actualizar (propietario o trabajador)
+  var docRef = rolActual === 'worker'
+    ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
+    : db.collection('pac_users').doc(usuarioActual.id);
+
+  docRef.update({ _email: email || null }).then(function() {
+    // Si hay email y Firebase Auth disponible, crear/vincular cuenta Auth
+    if (email && window._authCreateUser) {
+      // Intentar crear cuenta Auth (puede fallar si ya existe, lo ignoramos)
+      var pass = null; // No tenemos la contraseña en claro, solo el hash
+      // Solo actualizamos el campo en Firestore; Auth se vincula al crear contraseña
+    }
+    usuarioActual._email = email || null;
+    actualEl.textContent = email ? '📧 Email actual: ' + email : 'Sin email registrado';
+    toast('Email guardado ✔');
+  }).catch(function() {
+    errEl.textContent = 'Error al guardar. Inténtalo de nuevo.';
+  });
 }
 
 function _renderPerfilAvatar() {
@@ -2617,19 +2805,30 @@ function descargarPlantilla(mode) {
 function crearTrabajador() {
   var nombre = (document.getElementById('workerNombre').value || '').trim();
   var pass   = (document.getElementById('workerPass').value   || '').trim();
+  var email  = (document.getElementById('workerEmail').value  || '').trim();
   var errEl  = document.getElementById('workerError');
   if (!nombre) { errEl.textContent = 'El nombre es obligatorio'; return; }
   if (!pass || pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres'; return; }
   errEl.textContent = 'Creando…';
+
   hashPassword(pass).then(function(passHash) {
     var colorIdx = Math.floor(Math.random() * 6);
-    window._createWorker(usuarioActual.id, nombre, passHash, colorIdx).then(function(id) {
-      if (!id) { errEl.textContent = 'Error al crear trabajador'; return; }
-      document.getElementById('workerNombre').value = '';
-      document.getElementById('workerPass').value = '';
-      errEl.textContent = '';
-      toast('Trabajador "' + nombre + '" creado ✔');
-      renderTrabajadores();
+
+    // Crear cuenta Auth si hay email
+    var authPromise = (email && window._authCreateUser)
+      ? window._authCreateUser(email, pass)
+      : Promise.resolve(null);
+
+    authPromise.then(function(authUid) {
+      window._createWorker(usuarioActual.id, nombre, passHash, email, colorIdx, authUid).then(function(id) {
+        if (!id) { errEl.textContent = 'Error al crear trabajador'; return; }
+        document.getElementById('workerNombre').value = '';
+        document.getElementById('workerPass').value = '';
+        document.getElementById('workerEmail').value = '';
+        errEl.textContent = '';
+        toast('Trabajador "' + nombre + '" creado ✔');
+        renderTrabajadores();
+      });
     });
   });
 }
@@ -2646,17 +2845,30 @@ function renderTrabajadores() {
     var html = '';
     for (var i = 0; i < workers.length; i++) {
       var w = workers[i];
+      var emailInfo = w._email ? '<div style="font-size:11px;color:#aaa">📧 ' + w._email + '</div>' : '<div style="font-size:11px;color:#ccc">Sin email</div>';
       html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--borde)">' +
         '<div class="user-avatar av-' + ((w._colorIdx||0)%6) + '" style="width:36px;height:36px;font-size:15px">' +
         (w._nombre_display||'?').charAt(0).toUpperCase() + '</div>' +
-        '<div style="flex:1"><div style="font-weight:700;font-size:14px">' + (w._nombre_display||w._nombre) + '</div>' +
-        '<div style="font-size:12px;color:#aaa">Trabajador</div></div>' +
-        '<button class="worker-del-btn" data-id="' + w.id + '" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Eliminar</button>' +
-        '</div>';
+        '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + (w._nombre_display||w._nombre) + '</div>' +
+        emailInfo + '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0">' +
+        (w._email ? '<button class="worker-reset-btn" data-email="' + w._email + '" style="background:#fef3e2;color:#d35400;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔑</button>' : '') +
+        '<button class="worker-del-btn" data-id="' + w.id + '" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>' +
+        '</div></div>';
     }
     cont.innerHTML = html;
     cont.querySelectorAll('.worker-del-btn').forEach(function(btn){
       btn.addEventListener('click', function(){ eliminarTrabajador(this.getAttribute('data-id')); });
+    });
+    cont.querySelectorAll('.worker-reset-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var email = this.getAttribute('data-email');
+        if (!window._resetWorkerPassword) { toast('Sin conexión', true); return; }
+        window._resetWorkerPassword(email).then(function(ok) {
+          if (ok) toast('Email de recuperación enviado a ' + email + ' ✔');
+          else toast('Error al enviar email. Verifica que el email sea correcto.', true);
+        });
+      });
     });
   });
 }
