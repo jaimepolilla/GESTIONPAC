@@ -1408,77 +1408,91 @@ function iniciarApp() {
 function mostrarNovedades() {
   var banner = document.getElementById('bannerNovedades');
   if (!banner) return;
-
   var laboreos = DB.get(uk('laboreos'), []);
   if (!laboreos.length) { banner.style.display = 'none'; return; }
-
-  // Clave de último acceso POR USUARIO (no por propietario)
-  var claveUltimo = 'pac_ultimo_acceso_' + usuarioActual.id;
-  var ultimoAcceso = _LS.get(claveUltimo, 0);
   var ahora = Date.now();
+  var claveLocal = 'pac_ultimo_acceso_' + usuarioActual.id;
 
-  // Guardar timestamp de este acceso
-  _LS.set(claveUltimo, ahora);
+  function _render(ultimoAcceso) {
+    _LS.set(claveLocal, ahora);
+    _guardarUltimoAcceso(ahora);
+    if (!ultimoAcceso) { banner.style.display = 'none'; return; }
 
-  // Primera vez: no mostrar nada, solo registrar
-  if (!ultimoAcceso) { banner.style.display = 'none'; return; }
-
-  // Filtrar laboreos nuevos: usar _ts si existe, si no convertir fecha string a timestamp
-  var nuevos = laboreos.filter(function(lb) {
-    if (lb.autoGenerado) return false;
-    var ts = lb._ts;
-    if (!ts && lb.fecha) {
-      // Convertir "YYYY-MM-DD" a timestamp (inicio del día)
-      var parts = lb.fecha.split('-');
-      if (parts.length === 3) ts = new Date(parts[0], parts[1]-1, parts[2]).getTime();
-    }
-    return ts && ts > ultimoAcceso;
-  });
-
-  if (!nuevos.length) { banner.style.display = 'none'; return; }
-
-  // Agrupar por parcela
-  var porParcela = {};
-  nuevos.forEach(function(lb) {
-    var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
-    var nombre = p ? p.nombre : 'Parcela desconocida';
-    if (!porParcela[lb.parcelaId]) porParcela[lb.parcelaId] = { nombre: nombre, laboreos: [] };
-    porParcela[lb.parcelaId].laboreos.push(lb);
-  });
-
-  var ids = Object.keys(porParcela);
-  var resumen = ids.length === 1
-    ? nuevos.length + ' trabajo' + (nuevos.length>1?'s':'') + ' nuevo' + (nuevos.length>1?'s':'') + ' en <b>' + porParcela[ids[0]].nombre + '</b>'
-    : nuevos.length + ' trabajos nuevos en ' + ids.length + ' parcelas';
-
-  var detalle = '';
-  ids.forEach(function(pid) {
-    var g = porParcela[pid];
-    g.laboreos.forEach(function(lb) {
-      var fecha = lb.fecha ? ' · ' + lb.fecha : '';
-      var quien = lb._autor ? ' · ' + lb._autor : '';
-      var prod  = lb.producto ? lb.producto + fecha + quien : lb.tipo + fecha + quien;
-      detalle += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.15)">' +
-        '<span style="font-size:16px">' + _iconoLaboreo(lb.tipo) + '</span>' +
-        '<div style="flex:1;min-width:0">' +
-        '<div style="font-size:13px;font-weight:700">' + g.nombre + ' — ' + lb.tipo + '</div>' +
-        '<div style="font-size:11px;opacity:0.85">' + prod + '</div>' +
-        '</div>' +
-        '<button onclick="verParcela(\'' + pid + '\')" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap">Ver →</button>' +
-        '</div>';
+    var nuevos = laboreos.filter(function(lb) {
+      if (lb.autoGenerado) return false;
+      if (lb._autor && lb._autor === usuarioActual.nombre) return false;
+      var ts = lb._ts;
+      if (!ts && lb.fecha) {
+        var parts = lb.fecha.split('-');
+        if (parts.length === 3) ts = new Date(parts[0], parts[1]-1, parts[2]).getTime();
+      }
+      return ts && ts > ultimoAcceso;
     });
-  });
+    if (!nuevos.length) { banner.style.display = 'none'; return; }
 
-  banner.innerHTML =
-    '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
-    '<div style="font-size:14px;font-weight:700">\u{1F195} ' + resumen + '</div>' +
-    '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
-    '</div>' +
-    (detalle ? '<div>' + detalle + '</div>' : '') +
-    '</div>';
-  banner.style.display = '';
+    var porParcela = {};
+    nuevos.forEach(function(lb) {
+      var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
+      var pNombre = p ? p.nombre : 'Parcela desconocida';
+      if (!porParcela[lb.parcelaId]) porParcela[lb.parcelaId] = { nombre: pNombre, laboreos: [] };
+      porParcela[lb.parcelaId].laboreos.push(lb);
+    });
+    var ids = Object.keys(porParcela);
+    var resumen = ids.length === 1
+      ? nuevos.length + ' trabajo' + (nuevos.length>1?'s':'') + ' nuevo' + (nuevos.length>1?'s':'') + ' en <b>' + porParcela[ids[0]].nombre + '</b>'
+      : nuevos.length + ' trabajos nuevos en ' + ids.length + ' parcelas';
+
+    var detalle = '';
+    ids.forEach(function(pid) {
+      var g = porParcela[pid];
+      g.laboreos.forEach(function(lb) {
+        var fecha = lb.fecha ? ' \u00b7 ' + lb.fecha : '';
+        var quien = lb._autor ? ' \u00b7 ' + lb._autor : '';
+        var prod = lb.producto ? lb.producto + fecha + quien : lb.tipo + fecha + quien;
+        detalle += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.15)">' +
+          '<span style="font-size:16px">' + _iconoLaboreo(lb.tipo) + '</span>' +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:700">' + g.nombre + ' \u2014 ' + lb.tipo + '</div>' +
+          '<div style="font-size:11px;opacity:0.85">' + prod + '</div>' +
+          '</div>' +
+          '<button onclick="verParcela(\'' + pid + '\')" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap">Ver \u2192</button>' +
+          '</div>';
+      });
+    });
+    banner.innerHTML =
+      '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
+      '<div style="font-size:14px;font-weight:700">\u{1F195} ' + resumen + '</div>' +
+      '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
+      '</div>' +
+      (detalle ? '<div>' + detalle + '</div>' : '') +
+      '</div>';
+    banner.style.display = '';
+  }
+
+  _leerUltimoAcceso(function(ts) { _render(ts || _LS.get(claveLocal, 0)); });
 }
+
+function _leerUltimoAcceso(callback) {
+  var db = window._getDB ? window._getDB() : null;
+  if (!db || !usuarioActual) { callback(0); return; }
+  var docRef = rolActual === 'worker'
+    ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
+    : db.collection('pac_users').doc(usuarioActual.id);
+  docRef.get().then(function(snap) {
+    callback((snap.exists && snap.data() && snap.data()._ultimoAcceso) || 0);
+  }).catch(function() { callback(0); });
+}
+
+function _guardarUltimoAcceso(ts) {
+  var db = window._getDB ? window._getDB() : null;
+  if (!db || !usuarioActual) return;
+  var docRef = rolActual === 'worker'
+    ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
+    : db.collection('pac_users').doc(usuarioActual.id);
+  docRef.update({ _ultimoAcceso: ts }).catch(function(){});
+}
+
 
 function _iconoLaboreo(tipo) {
   var m = {
