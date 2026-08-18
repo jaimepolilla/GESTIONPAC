@@ -33,13 +33,25 @@
   var _isSaving = false;
   var _lastSavedHash = '';
 
-  // Inicializar Firebase inmediatamente al cargar la página
-  try {
-    firebase.initializeApp(FIREBASE_CONFIG);
-    _db = firebase.firestore();
-    console.log('Firebase listo');
-  } catch(e) {
-    console.error('Firebase init error:', e);
+  // Inicializar Firebase cuando el DOM esté listo (garantiza que los CDN han cargado)
+  function _initApp() {
+    try {
+      if (typeof firebase === 'undefined') {
+        console.error('Firebase SDK no cargado');
+        return;
+      }
+      firebase.initializeApp(FIREBASE_CONFIG);
+      _db = firebase.firestore();
+      console.log('Firebase listo');
+    } catch(e) {
+      console.error('Firebase init error:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initApp);
+  } else {
+    _initApp();
   }
 
   function _hash(obj) {
@@ -219,6 +231,9 @@
     return _db.collection('pac_users').doc(ownerId)
       .collection('workers').doc(workerId).delete();
   };
+
+  // Crear propietario nuevo en Firestore
+  window._createUserInFirestore = function(nombre, colorIdx) {
     if (!_db) return Promise.resolve(null);
     var id = Date.now().toString() + Math.random().toString(36).slice(2);
     return _db.collection('pac_users').doc(id).set({
