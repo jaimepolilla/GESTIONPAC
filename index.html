@@ -161,7 +161,10 @@
       if (window._reloadUserData) window._reloadUserData(data);
       var uid = window.usuarioActual ? window.usuarioActual.id : null;
       _cacheLocally(uid, data);
-      // Rerenderizar vista activa
+      // Rerenderizar vista activa — preservar banner de novedades
+      var bannerEl = document.getElementById('bannerNovedades');
+      var bannerHTML = bannerEl ? bannerEl.innerHTML : '';
+      var bannerVisible = bannerEl && bannerEl.style.display !== 'none';
       if (typeof renderCampanas   === 'function') renderCampanas();
       var page = document.querySelector('.page.active');
       if (page) {
@@ -170,6 +173,11 @@
         if (name === 'parcelas'   && typeof renderParcelas   === 'function') renderParcelas();
         if (name === 'semillas'   && typeof renderSemillas   === 'function') renderSemillas();
         if (name === 'maquinaria' && typeof renderMaquinaria === 'function') renderMaquinaria();
+      }
+      // Restaurar banner si estaba visible
+      if (bannerVisible) {
+        var bannerEl2 = document.getElementById('bannerNovedades');
+        if (bannerEl2) { bannerEl2.innerHTML = bannerHTML; bannerEl2.style.display = ''; }
       }
       setSyncStatus('ok');
     }, function() { setSyncStatus('offline'); });
