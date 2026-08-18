@@ -16,11 +16,8 @@
 <!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-// ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────────
-// Rellena estos valores con los de tu proyecto Firebase
-// (Firebase Console → Project Settings → Tu app web → SDK snippet)
 const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyCquJtXy_BM1_CwW0cZosrSoAjH4YPHnl0",
   authDomain:        "pac-gestion.firebaseapp.com",
@@ -29,104 +26,117 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "859379304072",
   appId:             "1:859379304072:web:1dff41146435cdd4b9413d"
 };
-// ──────────────────────────────────────────────────────────────────
 
 let _app, _db, _unsubscribe = null;
-let _syncEnabled = false;
-let _remoteUpdatePending = false;
+let _isSaving = false;
 let _lastSavedHash = '';
 
-function _hashData(obj) {
-  return JSON.stringify(obj).length + '_' + (JSON.stringify(obj).slice(0,40));
+function _hash(obj) {
+  const s = JSON.stringify(obj) || '';
+  return s.length + '|' + s.slice(0, 60);
 }
 
 function setSyncStatus(status) {
-  // status: 'ok' | 'saving' | 'offline' | 'disabled'
   const el = document.getElementById('syncStatus');
   if (!el) return;
   const map = {
-    ok:       { icon: '🟢', text: 'Sincronizado', color: '#27ae60' },
-    saving:   { icon: '🔄', text: 'Guardando…',  color: '#e67e22' },
-    offline:  { icon: '🔴', text: 'Sin conexión', color: '#c0392b' },
-    disabled: { icon: '⚪', text: 'Local',        color: '#aaa'    }
+    ok:      '🟢 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sincronizado</span>',
+    saving:  '🔄 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Guardando…</span>',
+    offline: '🔴 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sin conexión</span>',
+    loading: '⏳ <span style="font-size:10px;color:rgba(255,255,255,0.8)">Cargando…</span>',
   };
-  const s = map[status] || map.disabled;
-  el.innerHTML = s.icon + ' <span style="font-size:10px;color:rgba(255,255,255,0.75)">' + s.text + '</span>';
+  el.innerHTML = map[status] || map.offline;
 }
+window._setSyncStatus = setSyncStatus;
 
-// Inicializa Firebase y arranca listener para el usuario
+// ── INIT ──────────────────────────────────────────────────────────
 window._initFirebase = function(userId) {
-  if (FIREBASE_CONFIG.apiKey === 'TU_API_KEY') {
-    console.warn('Firebase no configurado — modo local activo');
-    setSyncStatus('disabled');
-    return;
-  }
   try {
     if (!_app) {
       _app = initializeApp(FIREBASE_CONFIG);
       _db  = getFirestore(_app);
-      // Persistencia offline (funciona en iOS Safari)
-      enableIndexedDbPersistence(_db).catch(function(){});
     }
-    _syncEnabled = true;
 
-    // Desuscribir listener anterior si cambia de usuario
     if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
 
+    setSyncStatus('loading');
     const docRef = doc(_db, 'pac_users', userId);
 
-    // Primer arranque: migrar localStorage → Firestore si Firestore está vacío
+    // Cargar datos desde Firestore al arrancar
     getDoc(docRef).then(function(snap) {
-      if (!snap.exists()) {
-        // Firestore vacío → subir datos locales
-        const localData = _buildUserPayload();
-        if (localData) {
-          setDoc(docRef, localData).then(function() {
-            setSyncStatus('ok');
-            window._toast && window._toast('☁️ Datos migrados a la nube');
-          }).catch(function() { setSyncStatus('offline'); });
-        }
+      if (snap.exists()) {
+        const data = snap.data();
+        _lastSavedHash = _hash(data);
+        if (window._reloadUserData) window._reloadUserData(data);
+        // Actualizar caché local
+        _cacheLocally(userId, data);
+        // Arrancar listener de cambios remotos
+        _startListener(docRef);
+        setSyncStatus('ok');
       } else {
+        // Usuario nuevo sin datos en Firestore — arrancar listener vacío
+        _startListener(docRef);
         setSyncStatus('ok');
       }
-    });
-
-    // Listener en tiempo real
-    _unsubscribe = onSnapshot(docRef, function(snap) {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      if (!data || !data.parcelas) return;
-
-      // Ignorar si estamos guardando (evita loop) o si el cambio vino de este dispositivo
-      if (_isSaving) return;
-      const hash = _hashData(data);
-      if (hash === _lastSavedHash) return;
-      _lastSavedHash = hash;
-
-      // Aplicar datos remotos
-      window._applyRemoteData(data);
-    }, function() {
+    }).catch(function(e) {
+      console.warn('Firebase getDoc error:', e);
       setSyncStatus('offline');
+      // Usar caché local si hay
+      _startListener(docRef);
     });
 
   } catch(e) {
     console.error('Firebase init error:', e);
-    setSyncStatus('disabled');
+    setSyncStatus('offline');
   }
 };
 
-let _isSaving = false;
+function _startListener(docRef) {
+  _unsubscribe = onSnapshot(docRef, function(snap) {
+    if (!snap.exists() || _isSaving) return;
+    const data = snap.data();
+    if (!data) return;
+    const hash = _hash(data);
+    if (hash === _lastSavedHash) return; // cambio propio, ignorar
+    _lastSavedHash = hash;
+    if (window._reloadUserData) window._reloadUserData(data);
+    _cacheLocally(window.usuarioActual ? window.usuarioActual.id : null, data);
+    // Rerenderizar
+    if (typeof renderCampanas   === 'function') renderCampanas();
+    const page = document.querySelector('.page.active');
+    if (page) {
+      const name = page.id.replace('page-','');
+      if (name === 'pac'       && typeof renderPAC        === 'function') renderPAC();
+      if (name === 'parcelas'  && typeof renderParcelas   === 'function') renderParcelas();
+      if (name === 'semillas'  && typeof renderSemillas   === 'function') renderSemillas();
+      if (name === 'maquinaria'&& typeof renderMaquinaria === 'function') renderMaquinaria();
+    }
+    setSyncStatus('ok');
+  }, function() { setSyncStatus('offline'); });
+}
 
-// Guarda todos los datos del usuario en Firestore
+function _cacheLocally(uid, data) {
+  if (!uid) return;
+  const LS = window._LS;
+  LS.set('u_'+uid+'_campanaActual', data.campanaActual || '');
+  LS.set('u_'+uid+'_campanas',      data.campanas      || []);
+  LS.set('u_'+uid+'_parcelas',      data.parcelas      || []);
+  LS.set('u_'+uid+'_semillas',      data.semillas      || []);
+  LS.set('u_'+uid+'_declaraciones', data.declaraciones || []);
+  LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
+  LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
+}
+
+// ── GUARDAR EN FIRESTORE ──────────────────────────────────────────
 window._saveToFirestore = function() {
-  if (!_syncEnabled || !_db || !window.usuarioActual) return;
-  const userId = window.usuarioActual.id;
-  const docRef = doc(_db, 'pac_users', userId);
-  const payload = _buildUserPayload();
+  if (!_db || !window.usuarioActual) return;
+  const uid = window.usuarioActual.id;
+  const payload = window._buildPayload ? window._buildPayload() : null;
   if (!payload) return;
   setSyncStatus('saving');
   _isSaving = true;
-  const hash = _hashData(payload);
+  const hash = _hash(payload);
+  const docRef = doc(_db, 'pac_users', uid);
   setDoc(docRef, payload).then(function() {
     _lastSavedHash = hash;
     _isSaving = false;
@@ -137,41 +147,21 @@ window._saveToFirestore = function() {
   });
 };
 
-function _buildUserPayload() {
-  if (!window.usuarioActual) return null;
-  const uid = window.usuarioActual.id;
-  const LS  = window._LS;
-  return {
-    campanaActual: LS.get('u_'+uid+'_campanaActual', ''),
-    campanas:      LS.get('u_'+uid+'_campanas',      []),
-    parcelas:      LS.get('u_'+uid+'_parcelas',      []),
-    semillas:      LS.get('u_'+uid+'_semillas',      []),
-    declaraciones: LS.get('u_'+uid+'_declaraciones', []),
-    maquinaria:    LS.get('u_'+uid+'_maquinaria',    []),
-    laboreos:      LS.get('u_'+uid+'_laboreos',      []),
-    _ts: Date.now()
-  };
-}
-
-// Busca usuario por nombre en Firestore. Devuelve {id, nombre, colorIdx} o null
+// ── BUSCAR USUARIO POR NOMBRE ─────────────────────────────────────
 window._lookupUserByName = async function(nombre) {
-  if (!_syncEnabled || !_db) return null;
-  const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  if (!_db) return null;
   try {
     const q = query(collection(_db, 'pac_users'), where('_nombre', '==', nombre.toLowerCase().trim()));
     const snap = await getDocs(q);
     if (snap.empty) return null;
-    const docData = snap.docs[0].data();
-    return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0 };
-  } catch(e) {
-    return null;
-  }
+    const d = snap.docs[0].data();
+    return { id: snap.docs[0].id, nombre: d._nombre_display || nombre, colorIdx: d._colorIdx || 0 };
+  } catch(e) { return null; }
 };
 
-// Crea un nuevo usuario en Firestore y devuelve su id
+// ── CREAR USUARIO EN FIRESTORE ────────────────────────────────────
 window._createUserInFirestore = async function(nombre, colorIdx) {
-  if (!_syncEnabled || !_db) return null;
-  const { collection, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  if (!_db) return null;
   try {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
     const docRef = doc(_db, 'pac_users', id);
@@ -180,39 +170,11 @@ window._createUserInFirestore = async function(nombre, colorIdx) {
       _nombre_display: nombre.trim(),
       _colorIdx: colorIdx,
       _ts: Date.now(),
-      campanaActual: '', campanas: [], parcelas: [], semillas: [], declaraciones: [], maquinaria: [], laboreos: []
+      campanaActual: '', campanas: [], parcelas: [], semillas: [],
+      declaraciones: [], maquinaria: [], laboreos: []
     });
     return id;
-  } catch(e) {
-    return null;
-  }
-};
-window._applyRemoteData = function(data) {
-  if (!window.usuarioActual) return;
-  const uid = window.usuarioActual.id;
-  const LS  = window._LS;
-  LS.set('u_'+uid+'_campanaActual', data.campanaActual || '');
-  LS.set('u_'+uid+'_campanas',      data.campanas      || []);
-  LS.set('u_'+uid+'_parcelas',      data.parcelas      || []);
-  LS.set('u_'+uid+'_semillas',      data.semillas      || []);
-  LS.set('u_'+uid+'_declaraciones', data.declaraciones || []);
-  LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
-  LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
-
-  // Actualizar variables globales del JS principal vía función expuesta
-  if (window._reloadUserData) window._reloadUserData(data);
-
-  // Rerenderizar la vista activa
-  if (typeof renderCampanas === 'function') renderCampanas();
-  const activePage = document.querySelector('.page.active');
-  if (activePage) {
-    const name = activePage.id.replace('page-','');
-    if (name === 'pac')        { if(typeof renderPAC        === 'function') renderPAC(); }
-    if (name === 'parcelas')   { if(typeof renderParcelas   === 'function') renderParcelas(); }
-    if (name === 'semillas')   { if(typeof renderSemillas   === 'function') renderSemillas(); }
-    if (name === 'maquinaria') { if(typeof renderMaquinaria === 'function') renderMaquinaria(); }
-  }
-  setSyncStatus('ok');
+  } catch(e) { return null; }
 };
 </script>
 <style>
@@ -808,7 +770,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 </nav>
 
 <script>
-// localStorage puro (sin sync) — usado internamente por Firebase module
+// localStorage — caché local únicamente
 var _LS = {
   get: function(k, def) { try { var v=JSON.parse(localStorage.getItem(k)); return v!==null?v:def; } catch(e) { return def; } },
   set: function(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
@@ -816,18 +778,12 @@ var _LS = {
 };
 window._LS = _LS;
 
-// DB con sync automático a Firestore al escribir
+// DB escribe en caché local. El sync a Firestore lo hace save()
 var DB = {
   get: function(k, def) { return _LS.get(k, def); },
-  set: function(k, v) {
-    _LS.set(k, v);
-    // Disparar sync con debounce (evita múltiples escrituras seguidas)
-    clearTimeout(DB._syncTimer);
-    DB._syncTimer = setTimeout(function(){ if(window._saveToFirestore) window._saveToFirestore(); }, 600);
-  },
-  del: function(k) { _LS.del(k); }
+  set: function(k, v)   { _LS.set(k, v); },
+  del: function(k)      { _LS.del(k); }
 };
-DB._syncTimer = null;
 
 var usuarios = DB.get('pac_usuarios', []);
 var usuarioActual = null;
@@ -845,6 +801,11 @@ window._reloadUserData = function(data) {
   parcelas      = data.parcelas      || [];
   semillas      = data.semillas      || [];
   declaraciones = data.declaraciones || [];
+  // Actualizar caché local también para maquinaria y laboreos
+  if (usuarioActual) {
+    DB.set(uk('maquinaria'), data.maquinaria || []);
+    DB.set(uk('laboreos'),   data.laboreos   || []);
+  }
 };
 setTimeout(function(){
   window.renderCampanas   = renderCampanas;
@@ -876,7 +837,29 @@ function save() {
   DB.set(uk('parcelas'),      parcelas);
   DB.set(uk('semillas'),      semillas);
   DB.set(uk('declaraciones'), declaraciones);
+  // Guardar en Firestore con debounce
+  clearTimeout(save._timer);
+  save._timer = setTimeout(function(){ if(window._saveToFirestore) window._saveToFirestore(); }, 500);
 }
+save._timer = null;
+
+// Payload completo para Firestore (incluye maquinaria y laboreos)
+window._buildPayload = function() {
+  if (!usuarioActual) return null;
+  return {
+    _nombre:         (usuarioActual.nombre||'').toLowerCase().trim(),
+    _nombre_display: usuarioActual.nombre||'',
+    _colorIdx:       usuarioActual.colorIdx||0,
+    _ts:             Date.now(),
+    campanaActual:   campanaActual,
+    campanas:        campanas,
+    parcelas:        parcelas,
+    semillas:        semillas,
+    declaraciones:   declaraciones,
+    maquinaria:      DB.get(uk('maquinaria'), []),
+    laboreos:        DB.get(uk('laboreos'),   [])
+  };
+};
 
 function restaurarCopiaLogin(event) {
   var file = event.target.files[0];
@@ -2066,12 +2049,12 @@ function agregarMaquinaria() {
   DB.set(uk('maquinaria'),maquinaria);
   ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('maqTipo').value='';
-  renderMaquinaria(); toast('Maquina anadida');
+  save(); renderMaquinaria(); toast('Maquina anadida');
 }
 
 function eliminarMaquinaria(id) {
   var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
+  DB.set(uk('maquinaria'),maquinaria); save(); renderMaquinaria(); toast('Maquina eliminada');
 }
 
 var fitoTemp=[], fertTemp=[];
@@ -2180,13 +2163,13 @@ function guardarLaboreo() {
   var idx=-1; for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===obj.id){idx=i;break;}}
   if(idx>=0) laboreos[idx]=obj; else laboreos.push(obj);
   DB.set(uk('laboreos'),laboreos);
-  cerrarModal('modalLaboreo'); renderPAC(); toast(lineaId?'Laboreo actualizado':'Laboreo registrado');
+  save(); cerrarModal('modalLaboreo'); renderPAC(); toast(lineaId?'Laboreo actualizado':'Laboreo registrado');
 }
 
 function eliminarLaboreo(lineaId) {
   mostrarConfirmacion('Eliminar laboreo','Se eliminara este registro de laboreo.',function(){
     var laboreos=DB.get(uk('laboreos'),[]).filter(function(d){return d.id!==lineaId;});
-    DB.set(uk('laboreos'),laboreos); renderPAC(); toast('Laboreo eliminado');
+    DB.set(uk('laboreos'),laboreos); save(); renderPAC(); toast('Laboreo eliminado');
   });
 }
 
