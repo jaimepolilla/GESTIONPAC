@@ -128,7 +128,7 @@
     if (!el) return;
     var map = {
       ok:      '🟢 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sincronizado</span>',
-      saving:  '🔄 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Guardando…</span>',
+      saving:  '\u{1F504} <span style="font-size:10px;color:rgba(255,255,255,0.8)">Guardando…</span>',
       offline: '🔴 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sin conexión</span>',
       loading: '⏳ <span style="font-size:10px;color:rgba(255,255,255,0.8)">Cargando…</span>'
     };
@@ -1213,7 +1213,7 @@ function loginPorNombre() {
   btn.disabled = true;
   errEl.textContent = '';
   errEl.style.color = 'var(--rojo)';
-  status.textContent = '🔄 Verificando…';
+  status.textContent = '\u{1F504} Verificando…';
 
   // Si el campo email está visible es la segunda pulsación (usuario nuevo confirmado)
   var emailWrap = document.getElementById('loginEmailWrap');
@@ -1221,7 +1221,7 @@ function loginPorNombre() {
 
   if (esSegundaPulsacion) {
     var email = (document.getElementById('loginEmail').value || '').trim();
-    status.textContent = '🆕 Creando usuario…';
+    status.textContent = '\u{1F195} Creando usuario…';
     hashPassword(pass).then(function(passHash) {
       var colorIdx = Math.floor(Math.random() * 6);
       _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx);
@@ -1458,8 +1458,8 @@ function mostrarNovedades() {
   banner.innerHTML =
     '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
-    '<div style="font-size:14px;font-weight:700">🆕 ' + resumen + '</div>' +
-    '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>' +
+    '<div style="font-size:14px;font-weight:700">\u{1F195} ' + resumen + '</div>' +
+    '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
     '</div>' +
     (detalle ? '<div>' + detalle + '</div>' : '') +
     '</div>';
@@ -1467,8 +1467,15 @@ function mostrarNovedades() {
 }
 
 function _iconoLaboreo(tipo) {
-  var m = {'Herbicida':'🌿','Fungicida':'🍄','Insecticida':'🐛','Siembra':'🌱','Abonado fondo':'📦','Abonado cobertera':'📦','Riego':'💧','Cosecha':'🌾','Arado':'🚜','Cultivado':'🚜'};
-  return m[tipo] || '🔧';
+  var m = {
+    'Herbicida':'\uD83C\uDF3F','Fungicida':'\uD83C\uDF44','Insecticida':'\uD83D\uDC1B',
+    'Acaricida':'\uD83D\uDC1B','Fitosanitario otro':'\uD83D\uDCA7',
+    'Siembra':'\uD83C\uDF31','Abonado fondo':'\uD83D\uDCE6','Abonado cobertera':'\uD83D\uDCE6',
+    'Fertirrigacion':'\uD83D\uDCA7','Estercolado':'\uD83D\uDCE6',
+    'Riego':'\uD83D\uDCA7','Cosecha':'\uD83C\uDF3E',
+    'Arado':'\uD83D\uDE9C','Cultivado':'\uD83D\uDE9C','Otro':'\uD83D\uDD27'
+  };
+  return m[tipo] || '\uD83D\uDD27';
 }
 
 function cerrarBannerNovedades() {
@@ -1494,7 +1501,7 @@ function abrirPerfil() {
   var u = usuarioActual;
   document.getElementById('perfilNombreTitle').textContent = u.nombre;
   document.getElementById('perfilNombreGrande').textContent = u.nombre;
-  document.getElementById('perfilRolBadge').textContent = rolActual === 'worker' ? '👷 Trabajador' : '👑 Propietario';
+  document.getElementById('perfilRolBadge').textContent = rolActual === 'worker' ? '\u{1F477} Trabajador' : '\u{1F451} Propietario';
   // Limpiar campos contraseña
   ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('perfilPassError').textContent = '';
@@ -1503,7 +1510,7 @@ function abrirPerfil() {
   var emailActualEl = document.getElementById('perfilEmailActual');
   var emailNuevoEl  = document.getElementById('perfilEmailNuevo');
   var emailErrorEl  = document.getElementById('perfilEmailError');
-  emailActualEl.textContent = emailActual ? '📧 Email actual: ' + emailActual : 'Sin email registrado';
+  emailActualEl.textContent = emailActual ? '\u{1F4E7} Email actual: ' + emailActual : 'Sin email registrado';
   emailNuevoEl.value = emailActual || '';
   emailErrorEl.textContent = '';
   // Renderizar avatar
@@ -1535,8 +1542,8 @@ function guardarEmailPerfil() {
       // Solo actualizamos el campo en Firestore; Auth se vincula al crear contraseña
     }
     usuarioActual._email = email || null;
-    actualEl.textContent = email ? '📧 Email actual: ' + email : 'Sin email registrado';
-    toast('Email guardado ✔');
+    actualEl.textContent = email ? '\u{1F4E7} Email actual: ' + email : 'Sin email registrado';
+    toast('Email guardado \u2714');
   }).catch(function() {
     errEl.textContent = 'Error al guardar. Inténtalo de nuevo.';
   });
@@ -1602,7 +1609,7 @@ function subirFotoPerfil(event) {
         window._saveToFirestore();
       }
       _renderPerfilAvatar();
-      toast('Foto actualizada ✔');
+      toast('Foto actualizada \u2714');
     };
     img.src = e.target.result;
   };
@@ -1641,7 +1648,7 @@ function cambiarContrasena() {
       hashPassword(nueva).then(function(hashNueva) {
         colRef.update({ _passHash: hashNueva }).then(function() {
           ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
-          toast('Contraseña actualizada ✔');
+          toast('Contraseña actualizada \u2714');
         }).catch(function() {
           errEl.textContent = 'Error al guardar. Inténtalo de nuevo.';
         });
@@ -2637,8 +2644,8 @@ function renderMaquinaria() {
       '<div style="flex:1;min-width:0"><div class="maq-name">'+m.nombre+'</div>' +
       '<div class="maq-sub">'+(m.tipo||'')+' — '+(m.marca||'')+' '+(m.modelo||'')+'</div></div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
-      '<button class="maq-btn-edit" data-id="'+m.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">✏️</button>' +
-      '<button class="maq-btn-del" data-id="'+m.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">✕</button>' +
+      '<button class="maq-btn-edit" data-id="'+m.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">\u270F\uFE0F</button>' +
+      '<button class="maq-btn-del" data-id="'+m.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">\u2715</button>' +
       '</div></div>';
   }
   html+='</div>';
@@ -2668,11 +2675,11 @@ function agregarMaquinaria() {
     if(btn){ btn.textContent='+ Añadir maquina'; btn.removeAttribute('data-editando'); }
     var cancelBtn = document.getElementById('btnCancelarEditMaq');
     if(cancelBtn) cancelBtn.remove();
-    toast('Maquinaria actualizada ✔');
+    toast('Maquinaria actualizada \u2714');
   } else {
     // Nueva
     maquinaria.push({ id: Date.now().toString(), nombre: nombre, tipo: tipo, marca: marca, modelo: modelo });
-    toast('Máquina añadida ✔');
+    toast('Máquina añadida \u2714');
   }
   DB.set(uk('maquinaria'), maquinaria);
   ['maqNombre','maqMarca','maqModelo'].forEach(function(id){ document.getElementById(id).value=''; });
@@ -2855,7 +2862,7 @@ showPage = function(name) {
           _editandoMaqId=null; btn.textContent='+ Añadir maquina'; btn.removeAttribute('data-editando');
           ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
           document.getElementById('maqTipo').value='';
-          renderMaquinaria(); toast('Maquinaria actualizada ✔');
+          renderMaquinaria(); toast('Maquinaria actualizada \u2714');
         } else { agregarMaquinaria(); }
       };
     },50);
@@ -2880,7 +2887,7 @@ function descargarPlantilla(mode) {
   ws['!cols'] = [24,10,10,10,16,18,22,20,14].map(function(w){return{wch:w};});
   XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
   XLSX.writeFile(wb, 'explotacion.xlsx');
-  toast('Plantilla descargada ✔');
+  toast('Plantilla descargada \u2714');
 }
 
 // ── TRABAJADORES ─────────────────────────────────────────────────
@@ -2908,7 +2915,7 @@ function crearTrabajador() {
         document.getElementById('workerPass').value = '';
         document.getElementById('workerEmail').value = '';
         errEl.textContent = '';
-        toast('Trabajador "' + nombre + '" creado ✔');
+        toast('Trabajador "' + nombre + '" creado \u2714');
         renderTrabajadores();
       });
     });
@@ -2927,15 +2934,15 @@ function renderTrabajadores() {
     var html = '';
     for (var i = 0; i < workers.length; i++) {
       var w = workers[i];
-      var emailInfo = w._email ? '<div style="font-size:11px;color:#aaa">📧 ' + w._email + '</div>' : '<div style="font-size:11px;color:#ccc">Sin email</div>';
+      var emailInfo = w._email ? '<div style="font-size:11px;color:#aaa">\u{1F4E7} ' + w._email + '</div>' : '<div style="font-size:11px;color:#ccc">Sin email</div>';
       html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--borde)">' +
         '<div class="user-avatar av-' + ((w._colorIdx||0)%6) + '" style="width:36px;height:36px;font-size:15px">' +
         (w._nombre_display||'?').charAt(0).toUpperCase() + '</div>' +
         '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + (w._nombre_display||w._nombre) + '</div>' +
         emailInfo + '</div>' +
         '<div style="display:flex;gap:6px;flex-shrink:0">' +
-        (w._email ? '<button class="worker-reset-btn" data-email="' + w._email + '" style="background:#fef3e2;color:#d35400;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔑</button>' : '') +
-        '<button class="worker-del-btn" data-id="' + w.id + '" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">✕</button>' +
+        (w._email ? '<button class="worker-reset-btn" data-email="' + w._email + '" style="background:#fef3e2;color:#d35400;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">\u{1F511}</button>' : '') +
+        '<button class="worker-del-btn" data-id="' + w.id + '" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">\u2715</button>' +
         '</div></div>';
     }
     cont.innerHTML = html;
@@ -2947,7 +2954,7 @@ function renderTrabajadores() {
         var email = this.getAttribute('data-email');
         if (!window._resetWorkerPassword) { toast('Sin conexión', true); return; }
         window._resetWorkerPassword(email).then(function(ok) {
-          if (ok) toast('Email de recuperación enviado a ' + email + ' ✔');
+          if (ok) toast('Email de recuperación enviado a ' + email + ' \u2714');
           else toast('Error al enviar email. Verifica que el email sea correcto.', true);
         });
       });
@@ -3040,18 +3047,18 @@ function mostrarModalGPS(parcelaId) {
   document.getElementById('btnGPSDirecto').onclick = function(){
     var st = document.getElementById('gpsDirectoStatus');
     var btn = this;
-    if (!navigator.geolocation){ st.style.display='block';st.style.color='var(--rojo)';st.textContent='⚠️ GPS no disponible';return; }
+    if (!navigator.geolocation){ st.style.display='block';st.style.color='var(--rojo)';st.textContent='\u26A0\uFE0F GPS no disponible';return; }
     btn.textContent='⏳ Obteniendo...'; btn.disabled=true; st.style.display='none';
     navigator.geolocation.getCurrentPosition(
       function(pos){
         var lat=pos.coords.latitude.toFixed(6), lon=pos.coords.longitude.toFixed(6);
         var idx=parcelas.findIndex(function(p){return p.id===parcelaId;});
-        if(idx>=0){ parcelas[idx].gps=lat+','+lon; save(); div.parentNode.removeChild(div); renderParcelas(); toast('✔ Ubicación guardada ('+pos.coords.accuracy.toFixed(0)+'m)'); }
+        if(idx>=0){ parcelas[idx].gps=lat+','+lon; save(); div.parentNode.removeChild(div); renderParcelas(); toast('\u2714 Ubicación guardada ('+pos.coords.accuracy.toFixed(0)+'m)'); }
       },
       function(err){
         btn.textContent='&#128225; Usar GPS del dispositivo'; btn.disabled=false;
         st.style.display='block'; st.style.color='var(--rojo)';
-        st.textContent=err.code===1?'⚠️ Permiso denegado. Activa la ubicación en Ajustes del dispositivo.':err.code===2?'⚠️ Sin señal GPS. Sal al exterior.':'⚠️ Tiempo agotado.';
+        st.textContent=err.code===1?'\u26A0\uFE0F Permiso denegado. Activa la ubicación en Ajustes del dispositivo.':err.code===2?'\u26A0\uFE0F Sin señal GPS. Sal al exterior.':'\u26A0\uFE0F Tiempo agotado.';
       },
       {enableHighAccuracy:true,timeout:15000,maximumAge:0}
     );
@@ -3063,7 +3070,7 @@ function mostrarModalGPS(parcelaId) {
     var lat=parseFloat(parts[0]),lon=parseFloat(parts[1]);
     if(isNaN(lat)||isNaN(lon)){toast('Coordenadas no válidas',true);return;}
     var idx=parcelas.findIndex(function(p){return p.id===parcelaId;});
-    if(idx>=0){ parcelas[idx].gps=lat.toFixed(6)+','+lon.toFixed(6); save(); div.parentNode.removeChild(div); renderParcelas(); toast('✔ Ubicación guardada'); }
+    if(idx>=0){ parcelas[idx].gps=lat.toFixed(6)+','+lon.toFixed(6); save(); div.parentNode.removeChild(div); renderParcelas(); toast('\u2714 Ubicación guardada'); }
   };
 }
 
@@ -3098,7 +3105,7 @@ function editarMaquinaria(id) {
   document.getElementById('maqModelo').value = m.modelo||'';
   _editandoMaqId = id;
   var btn = document.getElementById('btnAnadirMaquinaria');
-  if(btn){ btn.textContent='✔ Guardar cambios'; btn.setAttribute('data-editando',id); }
+  if(btn){ btn.textContent='\u2714 Guardar cambios'; btn.setAttribute('data-editando',id); }
   // Mostrar botón cancelar edición
   var cancelBtn = document.getElementById('btnCancelarEditMaq');
   if(!cancelBtn) {
@@ -3143,12 +3150,12 @@ function calcularAlertasPAC() {
     if(cultivosPermanentes.some(function(cp){return ult.indexOf(cp)>=0;})) continue;
     var last3=campsP.slice(-3);
     if(last3.length>=3&&last3.every(function(c){return historial[c]===historial[last3[0]];})){
-      alertas.push({tipo:'error',titulo:'⚠️ Rotación obligatoria: '+p.nombre,mensaje:'3 campañas con '+historial[last3[0]]+'. Debes cambiar de cultivo.',parcela:p.nombre});
+      alertas.push({tipo:'error',titulo:'\u26A0\uFE0F Rotación obligatoria: '+p.nombre,mensaje:'3 campañas con '+historial[last3[0]]+'. Debes cambiar de cultivo.',parcela:p.nombre});
     } else if(last3.length===2&&historial[last3[0]]===historial[last3[1]]){
       alertas.push({tipo:'warning',titulo:'⏰ Aviso: '+p.nombre,mensaje:'2 campañas seguidas con '+historial[last3[0]]+'. Si repite deberá rotar.',parcela:p.nombre});
     }
   }
-  if(!alertas.length) alertas.push({tipo:'ok',titulo:'✅ Sin alertas',mensaje:'No se detectan incumplimientos de rotación.',parcela:null});
+  if(!alertas.length) alertas.push({tipo:'ok',titulo:'\u2705 Sin alertas',mensaje:'No se detectan incumplimientos de rotación.',parcela:null});
   return alertas;
 }
 
@@ -3186,7 +3193,7 @@ function editarSemilla(id) {
   document.getElementById('nuevaSemillaTipo').value=s.tipo||'';
   document.getElementById('nuevaSemillaVariedad').value=s.variedad||'';
   var btn=document.getElementById('btnAgregarSemilla');
-  if(btn){btn.textContent='✔ Guardar cambios';btn.setAttribute('data-editando',id);btn.onclick=function(){agregarSemilla();};}
+  if(btn){btn.textContent='\u2714 Guardar cambios';btn.setAttribute('data-editando',id);btn.onclick=function(){agregarSemilla();};}
   document.getElementById('nuevaSemillaNombre').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('nuevaSemillaNombre').focus();
 }
