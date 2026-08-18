@@ -13,169 +13,163 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUEFDIEdlc3Rpb24iLCJzaG9ydF9uYW1lIjoiUEFDIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZWRmM2VhIiwidGhlbWVfY29sb3IiOiIjM2Q2YjJmIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIWnBaWGRDYjNnOUlqQWdNQ0F4TURBZ01UQXdJajQ4Y21WamRDQjNhV1IwYUQwaU1UQXdJaUJvWldsbmFIUTlJakV3TUNJZ2NuZzlJakl3SWlCbWFXeHNQU0lqTTJRMllqSm1JaTgrUEhSbGVIUWdlRDBpTlRBaUlIazlJamN5SWlCbWIyNTBMWE5wZW1VOUlqWXdJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWo0bUl6RXlOemd3TmpzOEwzUmxlSFErUEM5emRtYysiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
 <title>PAC Gestion</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-
-const FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyCquJtXy_BM1_CwW0cZosrSoAjH4YPHnl0",
-  authDomain:        "pac-gestion.firebaseapp.com",
-  projectId:         "pac-gestion",
-  storageBucket:     "pac-gestion.firebasestorage.app",
-  messagingSenderId: "859379304072",
-  appId:             "1:859379304072:web:1dff41146435cdd4b9413d"
-};
-
-let _app, _db, _unsubscribe = null;
-let _isSaving = false;
-let _lastSavedHash = '';
-
-function _hash(obj) {
-  const s = JSON.stringify(obj) || '';
-  return s.length + '|' + s.slice(0, 60);
-}
-
-function setSyncStatus(status) {
-  const el = document.getElementById('syncStatus');
-  if (!el) return;
-  const map = {
-    ok:      '🟢 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sincronizado</span>',
-    saving:  '🔄 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Guardando…</span>',
-    offline: '🔴 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sin conexión</span>',
-    loading: '⏳ <span style="font-size:10px;color:rgba(255,255,255,0.8)">Cargando…</span>',
+<!-- Firebase SDK compat (carga síncrona, funciona en todos los navegadores) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+(function() {
+  var FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyCquJtXy_BM1_CwW0cZosrSoAjH4YPHnl0",
+    authDomain:        "pac-gestion.firebaseapp.com",
+    projectId:         "pac-gestion",
+    storageBucket:     "pac-gestion.firebasestorage.app",
+    messagingSenderId: "859379304072",
+    appId:             "1:859379304072:web:1dff41146435cdd4b9413d"
   };
-  el.innerHTML = map[status] || map.offline;
-}
-window._setSyncStatus = setSyncStatus;
 
-// ── INIT ──────────────────────────────────────────────────────────
-window._initFirebase = function(userId) {
+  var _db = null;
+  var _unsubscribe = null;
+  var _isSaving = false;
+  var _lastSavedHash = '';
+
+  // Inicializar Firebase inmediatamente al cargar la página
   try {
-    if (!_app) {
-      _app = initializeApp(FIREBASE_CONFIG);
-      _db  = getFirestore(_app);
-    }
-
-    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
-
-    setSyncStatus('loading');
-    const docRef = doc(_db, 'pac_users', userId);
-
-    // Cargar datos desde Firestore al arrancar
-    getDoc(docRef).then(function(snap) {
-      if (snap.exists()) {
-        const data = snap.data();
-        _lastSavedHash = _hash(data);
-        if (window._reloadUserData) window._reloadUserData(data);
-        // Actualizar caché local
-        _cacheLocally(userId, data);
-        // Arrancar listener de cambios remotos
-        _startListener(docRef);
-        setSyncStatus('ok');
-      } else {
-        // Usuario nuevo sin datos en Firestore — arrancar listener vacío
-        _startListener(docRef);
-        setSyncStatus('ok');
-      }
-    }).catch(function(e) {
-      console.warn('Firebase getDoc error:', e);
-      setSyncStatus('offline');
-      // Usar caché local si hay
-      _startListener(docRef);
-    });
-
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.firestore();
+    console.log('Firebase listo');
   } catch(e) {
     console.error('Firebase init error:', e);
-    setSyncStatus('offline');
   }
-};
 
-function _startListener(docRef) {
-  _unsubscribe = onSnapshot(docRef, function(snap) {
-    if (!snap.exists() || _isSaving) return;
-    const data = snap.data();
-    if (!data) return;
-    const hash = _hash(data);
-    if (hash === _lastSavedHash) return; // cambio propio, ignorar
-    _lastSavedHash = hash;
-    if (window._reloadUserData) window._reloadUserData(data);
-    _cacheLocally(window.usuarioActual ? window.usuarioActual.id : null, data);
-    // Rerenderizar
-    if (typeof renderCampanas   === 'function') renderCampanas();
-    const page = document.querySelector('.page.active');
-    if (page) {
-      const name = page.id.replace('page-','');
-      if (name === 'pac'       && typeof renderPAC        === 'function') renderPAC();
-      if (name === 'parcelas'  && typeof renderParcelas   === 'function') renderParcelas();
-      if (name === 'semillas'  && typeof renderSemillas   === 'function') renderSemillas();
-      if (name === 'maquinaria'&& typeof renderMaquinaria === 'function') renderMaquinaria();
-    }
-    setSyncStatus('ok');
-  }, function() { setSyncStatus('offline'); });
-}
+  function _hash(obj) {
+    var s = JSON.stringify(obj) || '';
+    return s.length + '|' + s.slice(0, 60);
+  }
 
-function _cacheLocally(uid, data) {
-  if (!uid) return;
-  const LS = window._LS;
-  LS.set('u_'+uid+'_campanaActual', data.campanaActual || '');
-  LS.set('u_'+uid+'_campanas',      data.campanas      || []);
-  LS.set('u_'+uid+'_parcelas',      data.parcelas      || []);
-  LS.set('u_'+uid+'_semillas',      data.semillas      || []);
-  LS.set('u_'+uid+'_declaraciones', data.declaraciones || []);
-  LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
-  LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
-}
+  function setSyncStatus(status) {
+    var el = document.getElementById('syncStatus');
+    if (!el) return;
+    var map = {
+      ok:      '🟢 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sincronizado</span>',
+      saving:  '🔄 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Guardando…</span>',
+      offline: '🔴 <span style="font-size:10px;color:rgba(255,255,255,0.8)">Sin conexión</span>',
+      loading: '⏳ <span style="font-size:10px;color:rgba(255,255,255,0.8)">Cargando…</span>'
+    };
+    el.innerHTML = map[status] || map.offline;
+  }
+  window._setSyncStatus = setSyncStatus;
 
-// ── GUARDAR EN FIRESTORE ──────────────────────────────────────────
-window._saveToFirestore = function() {
-  if (!_db || !window.usuarioActual) return;
-  const uid = window.usuarioActual.id;
-  const payload = window._buildPayload ? window._buildPayload() : null;
-  if (!payload) return;
-  setSyncStatus('saving');
-  _isSaving = true;
-  const hash = _hash(payload);
-  const docRef = doc(_db, 'pac_users', uid);
-  setDoc(docRef, payload).then(function() {
-    _lastSavedHash = hash;
-    _isSaving = false;
-    setSyncStatus('ok');
-  }).catch(function() {
-    _isSaving = false;
-    setSyncStatus('offline');
-  });
-};
+  function _cacheLocally(uid, data) {
+    if (!uid || !window._LS) return;
+    var LS = window._LS;
+    LS.set('u_'+uid+'_campanaActual', data.campanaActual || '');
+    LS.set('u_'+uid+'_campanas',      data.campanas      || []);
+    LS.set('u_'+uid+'_parcelas',      data.parcelas      || []);
+    LS.set('u_'+uid+'_semillas',      data.semillas      || []);
+    LS.set('u_'+uid+'_declaraciones', data.declaraciones || []);
+    LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
+    LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
+  }
 
-// ── BUSCAR USUARIO POR NOMBRE ─────────────────────────────────────
-window._lookupUserByName = async function(nombre) {
-  if (!_db) return null;
-  try {
-    const q = query(collection(_db, 'pac_users'), where('_nombre', '==', nombre.toLowerCase().trim()));
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const d = snap.docs[0].data();
-    return { id: snap.docs[0].id, nombre: d._nombre_display || nombre, colorIdx: d._colorIdx || 0 };
-  } catch(e) { return null; }
-};
+  function _startListener(docRef) {
+    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+    _unsubscribe = docRef.onSnapshot(function(snap) {
+      if (!snap.exists || _isSaving) return;
+      var data = snap.data();
+      if (!data) return;
+      var hash = _hash(data);
+      if (hash === _lastSavedHash) return;
+      _lastSavedHash = hash;
+      if (window._reloadUserData) window._reloadUserData(data);
+      var uid = window.usuarioActual ? window.usuarioActual.id : null;
+      _cacheLocally(uid, data);
+      // Rerenderizar vista activa
+      if (typeof renderCampanas   === 'function') renderCampanas();
+      var page = document.querySelector('.page.active');
+      if (page) {
+        var name = page.id.replace('page-','');
+        if (name === 'pac'        && typeof renderPAC        === 'function') renderPAC();
+        if (name === 'parcelas'   && typeof renderParcelas   === 'function') renderParcelas();
+        if (name === 'semillas'   && typeof renderSemillas   === 'function') renderSemillas();
+        if (name === 'maquinaria' && typeof renderMaquinaria === 'function') renderMaquinaria();
+      }
+      setSyncStatus('ok');
+    }, function() { setSyncStatus('offline'); });
+  }
 
-// ── CREAR USUARIO EN FIRESTORE ────────────────────────────────────
-window._createUserInFirestore = async function(nombre, colorIdx) {
-  if (!_db) return null;
-  try {
-    const id = Date.now().toString() + Math.random().toString(36).slice(2);
-    const docRef = doc(_db, 'pac_users', id);
-    await setDoc(docRef, {
-      _nombre: nombre.toLowerCase().trim(),
+  // Iniciar sesión de usuario: carga datos de Firestore y llama onReady(data)
+  window._initFirebase = function(userId, onReady) {
+    if (!_db) { if (onReady) onReady(null); return; }
+    setSyncStatus('loading');
+    var docRef = _db.collection('pac_users').doc(userId);
+    docRef.get().then(function(snap) {
+      if (snap.exists) {
+        var data = snap.data();
+        _lastSavedHash = _hash(data);
+        _cacheLocally(userId, data);
+        if (onReady) onReady(data);
+      } else {
+        if (onReady) onReady(null);
+      }
+      _startListener(docRef);
+      setSyncStatus('ok');
+    }).catch(function(e) {
+      console.warn('Firestore getDoc error:', e);
+      setSyncStatus('offline');
+      if (onReady) onReady(null);
+    });
+  };
+
+  // Guardar todos los datos en Firestore
+  window._saveToFirestore = function() {
+    if (!_db || !window.usuarioActual) return;
+    var payload = window._buildPayload ? window._buildPayload() : null;
+    if (!payload) return;
+    setSyncStatus('saving');
+    _isSaving = true;
+    var hash = _hash(payload);
+    _db.collection('pac_users').doc(window.usuarioActual.id).set(payload)
+      .then(function() {
+        _lastSavedHash = hash;
+        _isSaving = false;
+        setSyncStatus('ok');
+      })
+      .catch(function() {
+        _isSaving = false;
+        setSyncStatus('offline');
+      });
+  };
+
+  // Buscar usuario por nombre en Firestore
+  window._lookupUserByName = function(nombre) {
+    if (!_db) return Promise.resolve(null);
+    return _db.collection('pac_users')
+      .where('_nombre', '==', nombre.toLowerCase().trim())
+      .get()
+      .then(function(snap) {
+        if (snap.empty) return null;
+        var d = snap.docs[0].data();
+        return { id: snap.docs[0].id, nombre: d._nombre_display || nombre, colorIdx: d._colorIdx || 0 };
+      })
+      .catch(function() { return null; });
+  };
+
+  // Crear usuario nuevo en Firestore
+  window._createUserInFirestore = function(nombre, colorIdx) {
+    if (!_db) return Promise.resolve(null);
+    var id = Date.now().toString() + Math.random().toString(36).slice(2);
+    return _db.collection('pac_users').doc(id).set({
+      _nombre:         nombre.toLowerCase().trim(),
       _nombre_display: nombre.trim(),
-      _colorIdx: colorIdx,
-      _ts: Date.now(),
+      _colorIdx:       colorIdx,
+      _ts:             Date.now(),
       campanaActual: '', campanas: [], parcelas: [], semillas: [],
       declaraciones: [], maquinaria: [], laboreos: []
-    });
-    return id;
-  } catch(e) { return null; }
-};
+    }).then(function() { return id; })
+      .catch(function() { return null; });
+  };
+
+})();
 </script>
 <style>
 :root{--verde:#3d6b2f;--verde-claro:#5a8f47;--verde-fondo:#edf3ea;--tierra:#8b5e3c;--tierra-claro:#f5ede4;--gris:#4a4a4a;--gris-claro:#f2f2f2;--blanco:#ffffff;--rojo:#c0392b;--azul:#2471a3;--azul-claro:#d6eaf8;--naranja:#e67e22;--naranja-claro:#fef0e7;--borde:#d0dcc9;--sombra:0 2px 8px rgba(0,0,0,0.10);--radio:12px;--font:"Segoe UI",system-ui,sans-serif;}
@@ -1006,7 +1000,6 @@ function loginPorNombre() {
 function registrarUsuario() { loginPorNombre(); }
 
 function entrarApp(uid) {
-  // Accept id string or user object
   var id = typeof uid === 'object' ? uid.id : String(uid);
   var u = null;
   for(var i=0;i<usuarios.length;i++) {
@@ -1016,16 +1009,40 @@ function entrarApp(uid) {
   usuarioActual = u;
   window.usuarioActual = u;
   DB.set('pac_lastUser', u.id);
-  loadUserData();
-  // Iniciar sincronización Firebase
-  if (window._initFirebase) window._initFirebase(u.id);
+
+  // Mostrar header/nav antes de cargar datos
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('appNav').style.display = 'flex';
   hideScreens();
   var av = document.getElementById('headerAvatar');
   av.textContent = u.nombre.charAt(0).toUpperCase();
   av.className = 'header-avatar av-' + (u.colorIdx % 6);
-  if(!parcelas.length) {
+
+  // Mostrar pantalla de carga mientras Firebase responde
+  var splash = document.getElementById('screenSplash');
+
+  if (window._initFirebase) {
+    // Firebase disponible: cargar datos remotos primero
+    if (window._setSyncStatus) window._setSyncStatus('loading');
+    window._initFirebase(u.id, function(datosRemoto) {
+      // Callback cuando Firebase termina de cargar
+      if (datosRemoto) {
+        if (window._reloadUserData) window._reloadUserData(datosRemoto);
+      } else {
+        // Sin datos remotos, usar localStorage como fallback
+        loadUserData();
+      }
+      _arrancarVista(u);
+    });
+  } else {
+    loadUserData();
+    _arrancarVista(u);
+  }
+}
+
+function _arrancarVista(u) {
+  bindModalEvents();
+  if (!parcelas.length && !campanas.length) {
     document.getElementById('splashBienvenida').textContent = 'Hola, ' + u.nombre + '!';
     showScreen('screenSplash');
   } else {
