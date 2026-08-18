@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<!-- PAC Gestion v3.0 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#3d6b2f">
@@ -1078,11 +1079,11 @@ function entrarApp(u) {
       } else {
         loadUserData();
       }
-      _arrancarVista(u);
+      _arrancarVista(u, datosRemoto);
     });
   } else {
     loadUserData();
-    _arrancarVista(u);
+    _arrancarVista(u, null);
   }
 }
 
@@ -1103,9 +1104,12 @@ function _aplicarPermisos() {
   }
 }
 
-function _arrancarVista(u) {
+function _arrancarVista(u, datosRemoto) {
   bindModalEvents();
-  if (!parcelas.length && !campanas.length && rolActual === 'owner') {
+  // Si Firebase cargó datos del propietario (aunque estén vacíos), ir a la app
+  // Solo mostrar splash si es propietario nuevo sin datos en absoluto
+  var tieneAlgo = parcelas.length || campanas.length || semillas.length;
+  if (!tieneAlgo && rolActual === 'owner' && !datosRemoto) {
     document.getElementById('splashBienvenida').textContent = 'Hola, ' + u.nombre + '!';
     showScreen('screenSplash');
   } else {
