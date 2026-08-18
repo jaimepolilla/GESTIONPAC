@@ -140,22 +140,84 @@
       });
   };
 
-  // Buscar usuario por nombre en Firestore
-  window._lookupUserByName = function(nombre) {
+  // Buscar usuario por nombre + verificar contraseña
+  // Devuelve: objeto usuario | 'wrong_password' | null
+  window._lookupUserByName = function(nombre, passHash) {
     if (!_db) return Promise.resolve(null);
+    var nombreNorm = nombre.toLowerCase().trim();
+    // Buscar primero en propietarios
     return _db.collection('pac_users')
-      .where('_nombre', '==', nombre.toLowerCase().trim())
+      .where('_nombre', '==', nombreNorm)
       .get()
       .then(function(snap) {
-        if (snap.empty) return null;
-        var d = snap.docs[0].data();
-        return { id: snap.docs[0].id, nombre: d._nombre_display || nombre, colorIdx: d._colorIdx || 0 };
+        if (!snap.empty) {
+          var docData = snap.docs[0].data();
+          // Si no tiene contraseña aún (usuario migrado), aceptar cualquiera y guardar
+          if (!docData._passHash) {
+            // Primera vez con contraseña: guardarla
+            snap.docs[0].ref.update({ _passHash: passHash });
+            return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0, rol: 'owner' };
+          }
+          if (docData._passHash !== passHash) return 'wrong_password';
+          return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0, rol: 'owner' };
+        }
+        // No es propietario → buscar como trabajador
+        // Primero listar todos los propietarios y buscar en sus workers
+        return _db.collection('pac_users').get().then(function(ownersSnap) {
+          var checks = ownersSnap.docs.map(function(ownerDoc) {
+            return ownerDoc.ref.collection('workers')
+              .where('_nombre', '==', nombreNorm)
+              .get()
+              .then(function(wSnap) {
+                if (wSnap.empty) return null;
+                var wData = wSnap.docs[0].data();
+                if (wData._passHash !== passHash) return 'wrong_password';
+                return { id: wSnap.docs[0].id, nombre: wData._nombre_display || nombre, colorIdx: wData._colorIdx || 0, rol: 'worker', ownerId: ownerDoc.id };
+              });
+          });
+          return Promise.all(checks).then(function(results) {
+            for (var i = 0; i < results.length; i++) {
+              if (results[i]) return results[i];
+            }
+            return null;
+          });
+        });
       })
-      .catch(function() { return null; });
+      .catch(function(e) { console.error('lookup error:', e); return null; });
   };
 
-  // Crear usuario nuevo en Firestore
-  window._createUserInFirestore = function(nombre, colorIdx) {
+  // Crear trabajador en subcolección workers del propietario
+  window._createWorker = function(ownerId, nombre, passHash, colorIdx) {
+    if (!_db) return Promise.resolve(null);
+    var id = Date.now().toString() + Math.random().toString(36).slice(2);
+    return _db.collection('pac_users').doc(ownerId)
+      .collection('workers').doc(id).set({
+        _nombre:         nombre.toLowerCase().trim(),
+        _nombre_display: nombre.trim(),
+        _passHash:       passHash,
+        _colorIdx:       colorIdx,
+        _ts:             Date.now()
+      }).then(function(){ return id; })
+        .catch(function(e){ console.error('createWorker error:', e); return null; });
+  };
+
+  // Listar trabajadores de un propietario
+  window._listWorkers = function(ownerId) {
+    if (!_db) return Promise.resolve([]);
+    return _db.collection('pac_users').doc(ownerId)
+      .collection('workers').get()
+      .then(function(snap) {
+        return snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+      })
+      .catch(function(){ return []; });
+  };
+
+  // Eliminar trabajador
+  window._deleteWorker = function(ownerId, workerId) {
+    if (!_db) return Promise.resolve();
+    return _db.collection('pac_users').doc(ownerId)
+      .collection('workers').doc(workerId).delete();
+  };
     if (!_db) return Promise.resolve(null);
     var id = Date.now().toString() + Math.random().toString(36).slice(2);
     return _db.collection('pac_users').doc(id).set({
@@ -341,39 +403,27 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <div class="screen active" id="screenLogin">
   <div class="screen-logo">&#127806;</div>
   <div class="screen-title">PAC Gestion</div>
-  <div class="screen-sub">Escribe tu nombre para entrar</div>
+  <div class="screen-sub">Accede con tu usuario</div>
   <div style="width:100%;max-width:380px">
+    <label>Nombre de usuario</label>
     <input type="text" id="loginNombre" placeholder="Tu nombre" maxlength="30"
-      autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+      autocomplete="username" autocorrect="off" autocapitalize="words" spellcheck="false"
+      onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()"
+      oninput="document.getElementById('loginError').textContent=''">
+    <label style="margin-top:12px">Contraseña</label>
+    <input type="password" id="loginPass" placeholder="Contraseña" maxlength="50"
+      autocomplete="current-password"
       onkeydown="if(event.key==='Enter')loginPorNombre()"
       oninput="document.getElementById('loginError').textContent=''">
     <div id="loginError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
     <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorNombre()" style="margin-top:14px">Entrar</button>
-    <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:12px;min-height:18px"></div>
-    <!-- Usuarios recientes en este dispositivo -->
+    <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:12px;min-height:20px"></div>
+    <!-- Accesos recientes -->
     <div id="loginRecientes" style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;display:none">
-      <div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:10px">Accesos recientes en este dispositivo</div>
+      <div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:10px">Acceso reciente</div>
       <div id="loginRecientesList"></div>
     </div>
   </div>
-</div>
-
-<!-- SPLASH -->
-<div class="screen" id="screenSplash">
-  <div class="screen-logo">&#127806;</div>
-  <div class="screen-title" id="splashBienvenida">Bienvenido!</div>
-  <div class="screen-sub">Como quieres anadir tus parcelas?</div>
-  <button class="btn-bienvenida" onclick="splashImportar()">
-    <span class="btn-bienvenida-icon">&#128202;</span>
-    <div><div class="btn-bienvenida-title">Importar desde Excel</div><div class="btn-bienvenida-sub">Sube tu fichero SIGPAC o formato propio</div></div>
-    <span style="color:#ccc;font-size:20px">&#8250;</span>
-  </button>
-  <button class="btn-bienvenida" onclick="splashManual()">
-    <span class="btn-bienvenida-icon">&#9998;</span>
-    <div><div class="btn-bienvenida-title">Anadir parcelas a mano</div><div class="btn-bienvenida-sub">Introduce las parcelas una por una</div></div>
-    <span style="color:#ccc;font-size:20px">&#8250;</span>
-  </button>
-  <button class="btn-link" style="margin-top:12px" onclick="splashSaltar()">Ahora no</button>
 </div>
 
 <!-- SPLASH -->
@@ -475,6 +525,20 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <div style="font-size:15px;font-weight:700;color:var(--rojo);margin-bottom:6px">&#128465; Gestionar campa&#241;as</div>
     <div style="font-size:13px;color:#666;margin-bottom:14px">Elimina campa&#241;as que ya no necesites. Se borrar&#225;n todos sus cultivos y laboreos asociados.</div>
     <div id="listaCampanasAjustes"></div>
+  </div>
+
+  <!-- TRABAJADORES (solo propietario) -->
+  <div class="card" id="cardTrabajadores" style="margin-bottom:14px;border-left:4px solid #8e44ad;display:none">
+    <div style="font-size:15px;font-weight:700;color:#8e44ad;margin-bottom:6px">&#128100; Trabajadores</div>
+    <div style="font-size:13px;color:#666;margin-bottom:14px">Los trabajadores pueden registrar laboreos en tus parcelas pero no pueden modificar datos ni ajustes.</div>
+    <div id="listaTrabajadores" style="margin-bottom:12px"></div>
+    <div style="border-top:1px solid var(--borde);padding-top:14px;margin-top:4px">
+      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">Añadir trabajador</div>
+      <input type="text" id="workerNombre" placeholder="Nombre del trabajador" maxlength="30" style="margin-bottom:8px">
+      <input type="password" id="workerPass" placeholder="Contraseña para el trabajador" maxlength="50" style="margin-bottom:8px">
+      <button onclick="crearTrabajador()" style="width:100%;padding:12px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear trabajador</button>
+      <div id="workerError" style="color:var(--rojo);font-size:13px;margin-top:6px;min-height:16px"></div>
+    </div>
   </div>
 
   <div class="import-mode-tabs">
@@ -905,8 +969,16 @@ function hideScreens() {
   for(var i=0;i<screens.length;i++) screens[i].classList.remove('active');
 }
 
+// ── HASH CONTRASEÑA (SHA-256 nativo del navegador) ───────────────
+function hashPassword(pass) {
+  var text = pass + '_pac_gestion_salt';
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+    .then(function(buf) {
+      return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    });
+}
+
 function renderLoginUsers() {
-  // Mostrar accesos recientes guardados localmente
   var recientes = _LS.get('pac_recientes', []);
   var wrap = document.getElementById('loginRecientes');
   var list = document.getElementById('loginRecientesList');
@@ -918,118 +990,92 @@ function renderLoginUsers() {
     var r = recientes[i];
     html += '<button class="user-item" data-nombre="' + r.nombre + '">' +
       '<div class="user-avatar av-' + (r.colorIdx % 6) + '">' + r.nombre.charAt(0).toUpperCase() + '</div>' +
-      '<div><div class="user-name">' + r.nombre + '</div><div class="user-meta">Acceso reciente</div></div>' +
+      '<div><div class="user-name">' + r.nombre + '</div><div class="user-meta">Toca para rellenar</div></div>' +
       '<div style="margin-left:auto;color:#ccc;font-size:20px">&#8250;</div></button>';
   }
   list.innerHTML = html;
   list.querySelectorAll('.user-item').forEach(function(btn) {
     btn.addEventListener('click', function() {
       document.getElementById('loginNombre').value = this.getAttribute('data-nombre');
-      loginPorNombre();
+      document.getElementById('loginPass').focus();
     });
   });
 }
 
 function loginPorNombre() {
   var nombre = (document.getElementById('loginNombre').value || '').trim();
-  if (!nombre) { document.getElementById('loginError').textContent = 'Escribe tu nombre'; return; }
-
-  var btn = document.getElementById('btnLoginEntrar');
+  var pass   = (document.getElementById('loginPass').value   || '').trim();
+  var errEl  = document.getElementById('loginError');
   var status = document.getElementById('loginStatus');
+  var btn    = document.getElementById('btnLoginEntrar');
+
+  if (!nombre) { errEl.textContent = 'Escribe tu nombre'; return; }
+  if (!pass)   { errEl.textContent = 'Escribe tu contraseña'; return; }
+
   btn.disabled = true;
-  status.textContent = '🔄 Buscando…';
+  errEl.textContent = '';
+  status.textContent = '🔄 Verificando…';
 
-  // Función para entrar con un usuario (local o remoto)
-  function entrarCon(u) {
-    // Guardar en recientes locales
-    var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== u.nombre.toLowerCase(); });
-    recientes.unshift({ nombre: u.nombre, colorIdx: u.colorIdx || 0 });
-    if (recientes.length > 5) recientes = recientes.slice(0, 5);
-    _LS.set('pac_recientes', recientes);
-    // Guardar en lista local de usuarios
-    var usrs = _LS.get('pac_usuarios', []);
-    var existe = false;
-    for (var i = 0; i < usrs.length; i++) { if (usrs[i].id === u.id) { existe = true; break; } }
-    if (!existe) { usrs.push(u); _LS.set('pac_usuarios', usrs); usuarios = usrs; }
-    btn.disabled = false; status.textContent = '';
-    entrarApp(u.id);
-  }
-
-  // Primero intentar Firebase
-  if (window._lookupUserByName) {
-    window._lookupUserByName(nombre).then(function(remoto) {
-      if (remoto) {
-        // Usuario encontrado en Firestore
-        status.textContent = '✅ Usuario encontrado';
-        entrarCon({ id: remoto.id, nombre: remoto.nombre, colorIdx: remoto.colorIdx });
-      } else {
-        // No existe → crear nuevo en Firestore
-        status.textContent = '🆕 Creando usuario…';
-        var colorIdx = Math.floor(Math.random() * 6);
-        window._createUserInFirestore(nombre, colorIdx).then(function(newId) {
-          if (newId) {
-            entrarCon({ id: newId, nombre: nombre, colorIdx: colorIdx });
-          } else {
-            // Firebase falló → crear solo local
-            crearUsuarioLocal(nombre);
-          }
-        });
-      }
-    }).catch(function() {
-      crearUsuarioLocal(nombre);
-    });
-  } else {
-    // Firebase no disponible → modo local
-    crearUsuarioLocal(nombre);
-  }
-
-  function crearUsuarioLocal(nombre) {
-    // Buscar si ya existe localmente
-    var usrs = _LS.get('pac_usuarios', []);
-    for (var i = 0; i < usrs.length; i++) {
-      if (usrs[i].nombre.toLowerCase() === nombre.toLowerCase()) {
-        entrarCon(usrs[i]); return;
-      }
+  hashPassword(pass).then(function(passHash) {
+    if (!window._lookupUserByName) {
+      btn.disabled = false; status.textContent = '';
+      errEl.textContent = 'Sin conexión a Firebase';
+      return;
     }
-    var u = { id: Date.now().toString() + Math.random().toString(36).slice(2), nombre: nombre, colorIdx: Math.floor(Math.random() * 6) };
-    usrs.push(u); _LS.set('pac_usuarios', usrs); usuarios = usrs;
-    entrarCon(u);
-  }
+    window._lookupUserByName(nombre, passHash).then(function(resultado) {
+      btn.disabled = false; status.textContent = '';
+      if (!resultado) {
+        errEl.textContent = 'Usuario o contraseña incorrectos';
+        return;
+      }
+      if (resultado === 'wrong_password') {
+        errEl.textContent = 'Contraseña incorrecta';
+        return;
+      }
+      // Login correcto
+      var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== resultado.nombre.toLowerCase(); });
+      recientes.unshift({ nombre: resultado.nombre, colorIdx: resultado.colorIdx || 0 });
+      _LS.set('pac_recientes', recientes.slice(0, 3));
+      // Si es trabajador, guardar referencia al propietario
+      if (resultado.rol === 'worker') {
+        _LS.set('pac_lastUser', resultado.ownerId + '|worker|' + resultado.id);
+      } else {
+        _LS.set('pac_lastUser', resultado.id);
+      }
+      entrarApp(resultado);
+    });
+  });
 }
 
 function registrarUsuario() { loginPorNombre(); }
 
-function entrarApp(uid) {
-  var id = typeof uid === 'object' ? uid.id : String(uid);
-  var u = null;
-  for(var i=0;i<usuarios.length;i++) {
-    if(String(usuarios[i].id) === id) { u = usuarios[i]; break; }
-  }
-  if(!u) { alert('Usuario no encontrado: ' + id); return; }
+// rol actual: 'owner' o 'worker'
+var rolActual = 'owner';
+var ownerIdActual = null; // para trabajadores: ID del propietario
+
+function entrarApp(u) {
+  // u puede ser objeto completo {id, nombre, colorIdx, rol, ownerId, ...}
   usuarioActual = u;
   window.usuarioActual = u;
-  DB.set('pac_lastUser', u.id);
+  rolActual = u.rol || 'owner';
+  ownerIdActual = u.ownerId || u.id; // datos siempre del propietario
 
-  // Mostrar header/nav antes de cargar datos
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('appNav').style.display = 'flex';
   hideScreens();
   var av = document.getElementById('headerAvatar');
   av.textContent = u.nombre.charAt(0).toUpperCase();
-  av.className = 'header-avatar av-' + (u.colorIdx % 6);
+  av.className = 'header-avatar av-' + ((u.colorIdx || 0) % 6);
 
-  // Mostrar pantalla de carga mientras Firebase responde
-  var splash = document.getElementById('screenSplash');
+  // Ocultar tabs que el trabajador no puede ver
+  _aplicarPermisos();
 
   if (window._initFirebase) {
-    // Firebase disponible: cargar datos remotos primero
     if (window._setSyncStatus) window._setSyncStatus('loading');
-    window._initFirebase(u.id, function(datosRemoto) {
-      // Callback cuando Firebase termina de cargar
+    window._initFirebase(ownerIdActual, function(datosRemoto) {
       if (datosRemoto) {
         if (window._reloadUserData) window._reloadUserData(datosRemoto);
       } else {
-        // Sin datos remotos, usar localStorage como fallback
         loadUserData();
       }
       _arrancarVista(u);
@@ -1040,9 +1086,26 @@ function entrarApp(uid) {
   }
 }
 
+function _aplicarPermisos() {
+  // Trabajador: solo ve Campañas (laboreos) y Campos (solo lectura)
+  // Ocultar Semillas, Maquinaria, Ajustes en nav
+  var navItems = document.querySelectorAll('#appNav .nav-item');
+  if (rolActual === 'worker') {
+    // Ocultar semillas (idx 2), maquinaria (idx 3), ajustes (idx 4)
+    if (navItems[2]) navItems[2].style.display = 'none';
+    if (navItems[3]) navItems[3].style.display = 'none';
+    if (navItems[4]) navItems[4].style.display = 'none';
+    // Ocultar FAB (añadir parcela)
+    var fab = document.getElementById('fabBtn');
+    if (fab) fab.style.display = 'none';
+  } else {
+    navItems.forEach(function(n){ n.style.display = ''; });
+  }
+}
+
 function _arrancarVista(u) {
   bindModalEvents();
-  if (!parcelas.length && !campanas.length) {
+  if (!parcelas.length && !campanas.length && rolActual === 'owner') {
     document.getElementById('splashBienvenida').textContent = 'Hola, ' + u.nombre + '!';
     showScreen('screenSplash');
   } else {
@@ -2206,6 +2269,10 @@ showPage = function(name) {
       b=document.getElementById('btnRestaurarAjustes'); if(b) b.onclick=function(){document.getElementById('fileInputRestore').click();};
       b=document.getElementById('btnPlantilla'); if(b) b.onclick=function(){descargarPlantilla('sigpac');};
       renderCampanasAjustes();
+      // Mostrar sección trabajadores solo al propietario
+      var cardW = document.getElementById('cardTrabajadores');
+      if (cardW) cardW.style.display = rolActual === 'owner' ? '' : 'none';
+      if (rolActual === 'owner') renderTrabajadores();
     },50);
   }
   if(name === 'maquinaria') {
@@ -2235,8 +2302,7 @@ showPage = function(name) {
 };
 
 renderLoginUsers();
-var lastId = _LS.get('pac_lastUser', null);
-if (lastId) { entrarApp(lastId); }
+// No auto-login: siempre mostrar pantalla de login para verificar contraseña
 
 // ── DESCARGAR PLANTILLA ─────────────────────────────────────────
 function descargarPlantilla(mode) {
@@ -2248,6 +2314,63 @@ function descargarPlantilla(mode) {
   XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
   XLSX.writeFile(wb, 'explotacion.xlsx');
   toast('Plantilla descargada ✔');
+}
+
+// ── TRABAJADORES ─────────────────────────────────────────────────
+function crearTrabajador() {
+  var nombre = (document.getElementById('workerNombre').value || '').trim();
+  var pass   = (document.getElementById('workerPass').value   || '').trim();
+  var errEl  = document.getElementById('workerError');
+  if (!nombre) { errEl.textContent = 'El nombre es obligatorio'; return; }
+  if (!pass || pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres'; return; }
+  errEl.textContent = 'Creando…';
+  hashPassword(pass).then(function(passHash) {
+    var colorIdx = Math.floor(Math.random() * 6);
+    window._createWorker(usuarioActual.id, nombre, passHash, colorIdx).then(function(id) {
+      if (!id) { errEl.textContent = 'Error al crear trabajador'; return; }
+      document.getElementById('workerNombre').value = '';
+      document.getElementById('workerPass').value = '';
+      errEl.textContent = '';
+      toast('Trabajador "' + nombre + '" creado ✔');
+      renderTrabajadores();
+    });
+  });
+}
+
+function renderTrabajadores() {
+  var cont = document.getElementById('listaTrabajadores');
+  if (!cont || rolActual !== 'owner') return;
+  cont.innerHTML = '<div style="font-size:12px;color:#aaa;padding:8px 0">Cargando…</div>';
+  window._listWorkers(usuarioActual.id).then(function(workers) {
+    if (!workers.length) {
+      cont.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0">Sin trabajadores aún</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < workers.length; i++) {
+      var w = workers[i];
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--borde)">' +
+        '<div class="user-avatar av-' + ((w._colorIdx||0)%6) + '" style="width:36px;height:36px;font-size:15px">' +
+        (w._nombre_display||'?').charAt(0).toUpperCase() + '</div>' +
+        '<div style="flex:1"><div style="font-weight:700;font-size:14px">' + (w._nombre_display||w._nombre) + '</div>' +
+        '<div style="font-size:12px;color:#aaa">Trabajador</div></div>' +
+        '<button class="worker-del-btn" data-id="' + w.id + '" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">Eliminar</button>' +
+        '</div>';
+    }
+    cont.innerHTML = html;
+    cont.querySelectorAll('.worker-del-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ eliminarTrabajador(this.getAttribute('data-id')); });
+    });
+  });
+}
+
+function eliminarTrabajador(workerId) {
+  mostrarConfirmacion('Eliminar trabajador', '¿Seguro? El trabajador perderá el acceso.', function() {
+    window._deleteWorker(usuarioActual.id, workerId).then(function() {
+      toast('Trabajador eliminado');
+      renderTrabajadores();
+    });
+  });
 }
 
 // ── CAMPAÑAS AJUSTES ─────────────────────────────────────────────
