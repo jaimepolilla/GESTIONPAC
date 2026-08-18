@@ -598,7 +598,14 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <header id="appHeader" style="display:none">
   <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
   <div style="display:flex;align-items:center;gap:8px"><div style="font-size:26px;line-height:1">&#127806;</div><div style="line-height:1.1"><div style="font-size:11px;font-weight:600;opacity:0.85;letter-spacing:0.5px">Gesti&#243;n</div><div style="font-size:20px;font-weight:800;letter-spacing:-0.5px">PAC</div><small id="headerCampana" style="font-size:10px;opacity:0.75"></small></div></div>
-  <div style="margin-left:auto"><div id="syncStatus" style="font-size:12px;display:flex;align-items:center;gap:3px">⚪ <span style="font-size:10px;color:rgba(255,255,255,0.75)">Local</span></div></div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+    <!-- Campana de notificaciones -->
+    <div id="btnNotificaciones" onclick="abrirNotificaciones()" style="display:none;position:relative;cursor:pointer;width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px">
+      &#128276;
+      <span id="badgeNotif" style="display:none;position:absolute;top:0;right:0;background:#e74c3c;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center"></span>
+    </div>
+    <div id="syncStatus" style="font-size:12px;display:flex;align-items:center;gap:3px">&#9898; <span style="font-size:10px;color:rgba(255,255,255,0.75)">Local</span></div>
+  </div>
   <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
 </header>
 
@@ -879,6 +886,14 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 </div>
 
 <button class="fab hidden" id="fabBtn" onclick="abrirModalNuevaParcela()">+</button>
+<!-- MODAL NOTIFICACIONES -->
+<div class="modal-overlay" id="modalNotificaciones">
+  <div class="modal" style="max-height:80vh">
+    <div class="modal-title"><span>&#128276; Trabajos nuevos</span><button class="modal-close" onclick="cerrarNotificaciones()">&#10005;</button></div>
+    <div id="listaNotificaciones" style="overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- MODAL CONFIRMAR -->
 <div class="modal-overlay" id="modalConfirmar">
   <div class="modal" style="max-height:40vh">
@@ -1006,11 +1021,6 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="nav-item" onclick="showPage('maquinaria')"><span>&#x1F69C;</span>Maquinaria</div>
   <div class="nav-item" onclick="showPage('importar')"><span>&#9881;</span>Ajustes</div>
 </nav>
-
-<!-- Banner novedades: fijo encima del contenido, fuera de cualquier página -->
-<div id="bannerNovedades" style="display:none;position:fixed;bottom:70px;left:0;right:0;z-index:500;padding:0 12px;pointer-events:none">
-  <div id="bannerNovedadesInner" style="pointer-events:auto"></div>
-</div>
 
 <script>
 // localStorage — caché local únicamente
@@ -1403,32 +1413,48 @@ function iniciarApp() {
   renderCampanas();
   showPage('pac');
   bindModalEvents();
-  // Mostrar novedades al entrar
-  setTimeout(function(){ mostrarNovedades(); }, 300);
+  // Actualizar badge de notificaciones (sin timeout, sin auto-show)
+  setTimeout(function(){
+    // Registrar primer acceso si no existe, luego actualizar badge
+    var db = window._getDB ? window._getDB() : null;
+    if (db && usuarioActual) {
+      var docRef = rolActual === 'worker'
+        ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
+        : db.collection('pac_users').doc(usuarioActual.id);
+      docRef.get().then(function(snap) {
+        if (!snap.exists || !snap.data()._ultimoAcceso) {
+          // Primera vez: registrar ahora
+          docRef.set({ _ultimoAcceso: Date.now() }, { merge: true });
+        } else {
+          // Ya tiene acceso previo: calcular badge
+          actualizarBadge();
+        }
+      });
+    }
+  }, 500);
 }
 
 // ── SISTEMA DE NOVEDADES ──────────────────────────────────────────
-var _bannerNovedadesMostrado = false;
+// ── SISTEMA DE NOTIFICACIONES ─────────────────────────────────────
+var _notifLeidas = false;
 
-function mostrarNovedades() {
-  // Si ya está mostrándose, no hacer nada
-  if (_bannerNovedadesMostrado) return;
-  var banner = document.getElementById('bannerNovedades');
-  if (!banner) return;
+function _iconoLaboreo(tipo) {
+  var m = {
+    'Herbicida':'\uD83C\uDF3F','Fungicida':'\uD83C\uDF44','Insecticida':'\uD83D\uDC1B',
+    'Acaricida':'\uD83D\uDC1B','Fitosanitario otro':'\uD83D\uDCA7',
+    'Siembra':'\uD83C\uDF31','Abonado fondo':'\uD83D\uDCE6','Abonado cobertera':'\uD83D\uDCE6',
+    'Fertirrigacion':'\uD83D\uDCA7','Estercolado':'\uD83D\uDCE6',
+    'Riego':'\uD83D\uDCA7','Cosecha':'\uD83C\uDF3E',
+    'Arado':'\uD83D\uDE9C','Cultivado':'\uD83D\uDE9C','Otro':'\uD83D\uDD27'
+  };
+  return m[tipo] || '\uD83D\uDD27';
+}
+
+function calcularNotificaciones(callback) {
   var laboreos = DB.get(uk('laboreos'), []);
-  if (!laboreos.length) { banner.style.display = 'none'; return; }
-  var ahora = Date.now();
-  var claveLocal = 'pac_ultimo_acceso_' + usuarioActual.id;
-
-  function _render(ultimoAcceso) {
-    if (!ultimoAcceso) {
-      // Primera vez: solo guardar timestamp, no mostrar nada
-      _LS.set(claveLocal, ahora);
-      _guardarUltimoAcceso(ahora);
-      banner.style.display = 'none';
-      return;
-    }
-
+  if (!laboreos.length) { callback([]); return; }
+  _leerUltimoAcceso(function(ultimoAcceso) {
+    if (!ultimoAcceso) { callback([]); return; }
     var nuevos = laboreos.filter(function(lb) {
       if (lb.autoGenerado) return false;
       if (lb._autor && lb._autor === usuarioActual.nombre) return false;
@@ -1439,51 +1465,82 @@ function mostrarNovedades() {
       }
       return ts && ts > ultimoAcceso;
     });
-    if (!nuevos.length) { banner.style.display = 'none'; return; }
+    callback(nuevos);
+  });
+}
 
-    var porParcela = {};
-    nuevos.forEach(function(lb) {
-      var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
-      var pNombre = p ? p.nombre : 'Parcela desconocida';
-      if (!porParcela[lb.parcelaId]) porParcela[lb.parcelaId] = { nombre: pNombre, laboreos: [] };
-      porParcela[lb.parcelaId].laboreos.push(lb);
-    });
-    var ids = Object.keys(porParcela);
-    var resumen = ids.length === 1
-      ? nuevos.length + ' trabajo' + (nuevos.length>1?'s':'') + ' nuevo' + (nuevos.length>1?'s':'') + ' en <b>' + porParcela[ids[0]].nombre + '</b>'
-      : nuevos.length + ' trabajos nuevos en ' + ids.length + ' parcelas';
+function actualizarBadge() {
+  calcularNotificaciones(function(nuevos) {
+    var btn = document.getElementById('btnNotificaciones');
+    var badge = document.getElementById('badgeNotif');
+    if (!btn) return;
+    if (nuevos.length > 0) {
+      btn.style.display = 'flex';
+      badge.style.display = 'flex';
+      badge.textContent = nuevos.length > 9 ? '9+' : nuevos.length;
+    } else {
+      btn.style.display = 'none';
+      badge.style.display = 'none';
+    }
+  });
+}
 
-    var detalle = '';
-    ids.forEach(function(pid) {
-      var g = porParcela[pid];
-      g.laboreos.forEach(function(lb) {
+function abrirNotificaciones() {
+  calcularNotificaciones(function(nuevos) {
+    var lista = document.getElementById('listaNotificaciones');
+    if (!nuevos.length) {
+      lista.innerHTML = '<div style="text-align:center;color:#aaa;padding:30px;font-size:14px">Sin trabajos nuevos</div>';
+    } else {
+      var html = '';
+      nuevos.forEach(function(lb) {
+        var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
+        var pNombre = p ? p.nombre : 'Parcela desconocida';
         var fecha = lb.fecha ? ' \u00b7 ' + lb.fecha : '';
-        var quien = lb._autor ? ' \u00b7 ' + lb._autor : '';
-        var prod = lb.producto ? lb.producto + fecha + quien : lb.tipo + fecha + quien;
-        detalle += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.15)">' +
-          '<span style="font-size:16px">' + _iconoLaboreo(lb.tipo) + '</span>' +
+        var quien = lb._autor ? lb._autor : 'Propietario';
+        var prod = lb.producto ? ' \u00b7 ' + lb.producto : '';
+        html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde)">' +
+          '<div style="font-size:24px;width:36px;text-align:center">' + _iconoLaboreo(lb.tipo) + '</div>' +
           '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:13px;font-weight:700">' + g.nombre + ' \u2014 ' + lb.tipo + '</div>' +
-          '<div style="font-size:11px;opacity:0.85">' + prod + '</div>' +
+          '<div style="font-weight:700;font-size:14px">' + pNombre + ' \u2014 ' + lb.tipo + '</div>' +
+          '<div style="font-size:12px;color:#666">' + quien + fecha + prod + '</div>' +
           '</div>' +
-          '<button onclick="verParcela(\'' + pid + '\')" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap">Ver \u2192</button>' +
+          '<button onclick="verParcela(\'' + lb.parcelaId + '\')" style="background:var(--verde-fondo);color:var(--verde);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">Ver</button>' +
           '</div>';
       });
-    });
-    var inner = document.getElementById('bannerNovedadesInner');
-    if (inner) inner.innerHTML =
-      '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,0.25)">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
-      '<div style="font-size:14px;font-weight:700">\u{1F195} ' + resumen + '</div>' +
-      '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:28px;height:28px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
-      '</div>' +
-      (detalle ? '<div>' + detalle + '</div>' : '') +
-      '</div>';
-    banner.style.display = '';
-    _bannerNovedadesMostrado = true;
-  }
+      lista.innerHTML = html;
+    }
+    document.getElementById('modalNotificaciones').classList.add('open');
+  });
+}
 
-  _leerUltimoAcceso(function(ts) { _render(ts || _LS.get(claveLocal, 0)); });
+function cerrarNotificaciones() {
+  document.getElementById('modalNotificaciones').classList.remove('open');
+  // Marcar como leídas al cerrar
+  var ahora = Date.now();
+  _LS.set('pac_ultimo_acceso_' + usuarioActual.id, ahora);
+  _guardarUltimoAcceso(ahora);
+  // Ocultar badge
+  var btn = document.getElementById('btnNotificaciones');
+  var badge = document.getElementById('badgeNotif');
+  if (btn) btn.style.display = 'none';
+  if (badge) badge.style.display = 'none';
+}
+
+function verParcela(parcelaId) {
+  cerrarNotificaciones();
+  document.getElementById('modalNotificaciones').classList.remove('open');
+  showPage('pac');
+  setTimeout(function() {
+    var el = document.getElementById('pb-' + parcelaId);
+    if (el) {
+      el.style.display = '';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 200);
+}
+
+function mostrarNovedades() {
+  actualizarBadge();
 }
 
 function _leerUltimoAcceso(callback) {
@@ -1503,44 +1560,8 @@ function _guardarUltimoAcceso(ts) {
   var docRef = rolActual === 'worker'
     ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
     : db.collection('pac_users').doc(usuarioActual.id);
-  docRef.set({ _ultimoAcceso: ts }, { merge: true }).catch(function(e){ console.warn('guardarUltimoAcceso error:', e); });
-}
-
-
-function _iconoLaboreo(tipo) {
-  var m = {
-    'Herbicida':'\uD83C\uDF3F','Fungicida':'\uD83C\uDF44','Insecticida':'\uD83D\uDC1B',
-    'Acaricida':'\uD83D\uDC1B','Fitosanitario otro':'\uD83D\uDCA7',
-    'Siembra':'\uD83C\uDF31','Abonado fondo':'\uD83D\uDCE6','Abonado cobertera':'\uD83D\uDCE6',
-    'Fertirrigacion':'\uD83D\uDCA7','Estercolado':'\uD83D\uDCE6',
-    'Riego':'\uD83D\uDCA7','Cosecha':'\uD83C\uDF3E',
-    'Arado':'\uD83D\uDE9C','Cultivado':'\uD83D\uDE9C','Otro':'\uD83D\uDD27'
-  };
-  return m[tipo] || '\uD83D\uDD27';
-}
-
-function cerrarBannerNovedades() {
-  var b = document.getElementById('bannerNovedades');
-  if (b) b.style.display = 'none';
-  _bannerNovedadesMostrado = false;
-  // Guardar timestamp AHORA que el usuario confirmó que lo vio
-  var claveLocal = 'pac_ultimo_acceso_' + usuarioActual.id;
-  var ahora = Date.now();
-  _LS.set(claveLocal, ahora);
-  _guardarUltimoAcceso(ahora);
-}
-
-function verParcela(parcelaId) {
-  cerrarBannerNovedades();
-  showPage('pac');
-  // Expandir la tarjeta de esa parcela
-  setTimeout(function() {
-    var el = document.getElementById('pb-' + parcelaId);
-    if (el) {
-      el.style.display = '';
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 200);
+  // Registrar primer acceso si no existe
+  docRef.set({ _ultimoAcceso: ts }, { merge: true }).catch(function(){});
 }
 
 
