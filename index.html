@@ -147,7 +147,40 @@ function _buildUserPayload() {
   };
 }
 
-// Aplica datos remotos: actualiza localStorage y variables globales, y rerenderiza
+// Busca usuario por nombre en Firestore. Devuelve {id, nombre, colorIdx} o null
+window._lookupUserByName = async function(nombre) {
+  if (!_syncEnabled || !_db) return null;
+  const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  try {
+    const q = query(collection(_db, 'pac_users'), where('_nombre', '==', nombre.toLowerCase().trim()));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const docData = snap.docs[0].data();
+    return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0 };
+  } catch(e) {
+    return null;
+  }
+};
+
+// Crea un nuevo usuario en Firestore y devuelve su id
+window._createUserInFirestore = async function(nombre, colorIdx) {
+  if (!_syncEnabled || !_db) return null;
+  const { collection, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  try {
+    const id = Date.now().toString() + Math.random().toString(36).slice(2);
+    const docRef = doc(_db, 'pac_users', id);
+    await setDoc(docRef, {
+      _nombre: nombre.toLowerCase().trim(),
+      _nombre_display: nombre.trim(),
+      _colorIdx: colorIdx,
+      _ts: Date.now(),
+      campanaActual: '', campanas: [], parcelas: [], semillas: [], declaraciones: [], maquinaria: [], laboreos: []
+    });
+    return id;
+  } catch(e) {
+    return null;
+  }
+};
 window._applyRemoteData = function(data) {
   if (!window.usuarioActual) return;
   const uid = window.usuarioActual.id;
@@ -350,36 +383,39 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <div class="screen active" id="screenLogin">
   <div class="screen-logo">&#127806;</div>
   <div class="screen-title">PAC Gestion</div>
-  <div class="screen-sub">Selecciona tu usuario</div>
-  <div class="user-list" id="loginUserList"></div>
-  <button class="btn-link" onclick="showScreen('screenRegister')">+ Crear nuevo usuario</button>
-  <div style="width:100%;max-width:380px;margin-top:24px;border-top:1px solid var(--borde);padding-top:20px">
-    <div style="font-size:13px;color:#aaa;text-align:center;margin-bottom:12px">
-      &#128260; Accedes desde otro dispositivo?
+  <div class="screen-sub">Escribe tu nombre para entrar</div>
+  <div style="width:100%;max-width:380px">
+    <input type="text" id="loginNombre" placeholder="Tu nombre" maxlength="30"
+      autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false"
+      onkeydown="if(event.key==='Enter')loginPorNombre()"
+      oninput="document.getElementById('loginError').textContent=''">
+    <div id="loginError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
+    <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorNombre()" style="margin-top:14px">Entrar</button>
+    <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:12px;min-height:18px"></div>
+    <!-- Usuarios recientes en este dispositivo -->
+    <div id="loginRecientes" style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;display:none">
+      <div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:10px">Accesos recientes en este dispositivo</div>
+      <div id="loginRecientesList"></div>
     </div>
-    <button class="btn-bienvenida" onclick="document.getElementById('fileInputLoginRestore').click()" style="justify-content:center;gap:10px">
-      <span style="font-size:22px">&#128194;</span>
-      <div>
-        <div class="btn-bienvenida-title">Restaurar mis datos</div>
-        <div class="btn-bienvenida-sub">Carga tu fichero de copia .json</div>
-      </div>
-    </button>
-    <input type="file" id="fileInputLoginRestore" accept=".json" style="display:none" onchange="restaurarCopiaLogin(event)">
   </div>
 </div>
 
-<!-- REGISTRO -->
-<div class="screen" id="screenRegister">
-  <div class="screen-logo">&#128100;</div>
-  <div class="screen-title">Nuevo usuario</div>
-  <div class="screen-sub">Crea tu perfil</div>
-  <div style="width:100%;max-width:380px">
-    <label>Nombre</label>
-    <input type="text" id="regNombre" placeholder="Tu nombre" maxlength="20" onkeydown="if(event.key==='Enter')registrarUsuario()">
-    <div id="regError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:8px"></div>
-    <button class="btn-primary" onclick="registrarUsuario()">Crear usuario</button>
-    <button class="btn-secondary" onclick="showScreen('screenLogin')">Cancelar</button>
-  </div>
+<!-- SPLASH -->
+<div class="screen" id="screenSplash">
+  <div class="screen-logo">&#127806;</div>
+  <div class="screen-title" id="splashBienvenida">Bienvenido!</div>
+  <div class="screen-sub">Como quieres anadir tus parcelas?</div>
+  <button class="btn-bienvenida" onclick="splashImportar()">
+    <span class="btn-bienvenida-icon">&#128202;</span>
+    <div><div class="btn-bienvenida-title">Importar desde Excel</div><div class="btn-bienvenida-sub">Sube tu fichero SIGPAC o formato propio</div></div>
+    <span style="color:#ccc;font-size:20px">&#8250;</span>
+  </button>
+  <button class="btn-bienvenida" onclick="splashManual()">
+    <span class="btn-bienvenida-icon">&#9998;</span>
+    <div><div class="btn-bienvenida-title">Anadir parcelas a mano</div><div class="btn-bienvenida-sub">Introduce las parcelas una por una</div></div>
+    <span style="color:#ccc;font-size:20px">&#8250;</span>
+  </button>
+  <button class="btn-link" style="margin-top:12px" onclick="splashSaltar()">Ahora no</button>
 </div>
 
 <!-- SPLASH -->
@@ -1044,44 +1080,98 @@ function hideScreens() {
 }
 
 function renderLoginUsers() {
-  var list = document.getElementById('loginUserList');
-  if (!usuarios.length) {
-    list.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px;font-size:14px">No hay usuarios. Crea uno nuevo.</div>';
-    return;
-  }
+  // Mostrar accesos recientes guardados localmente
+  var recientes = _LS.get('pac_recientes', []);
+  var wrap = document.getElementById('loginRecientes');
+  var list = document.getElementById('loginRecientesList');
+  if (!wrap || !list) return;
+  if (!recientes.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
   var html = '';
-  for(var i=0;i<usuarios.length;i++) {
-    var u = usuarios[i];
-    var np = (DB.get('u_'+u.id+'_parcelas') || []).length;
-    html += '<button class="user-item" data-uid="' + u.id + '">' +
-      '<div class="user-avatar av-' + (u.colorIdx % 6) + '">' + u.nombre.charAt(0).toUpperCase() + '</div>' +
-      '<div><div class="user-name">' + u.nombre + '</div>' +
-      '<div class="user-meta">' + np + ' parcelas</div></div>' +
+  for (var i = 0; i < recientes.length; i++) {
+    var r = recientes[i];
+    html += '<button class="user-item" data-nombre="' + r.nombre + '">' +
+      '<div class="user-avatar av-' + (r.colorIdx % 6) + '">' + r.nombre.charAt(0).toUpperCase() + '</div>' +
+      '<div><div class="user-name">' + r.nombre + '</div><div class="user-meta">Acceso reciente</div></div>' +
       '<div style="margin-left:auto;color:#ccc;font-size:20px">&#8250;</div></button>';
   }
   list.innerHTML = html;
-  // Attach events after rendering
-  var btns = list.querySelectorAll('.user-item');
-  for(var i=0;i<btns.length;i++) {
-    btns[i].addEventListener('click', function() {
-      entrarApp(this.getAttribute('data-uid'));
+  list.querySelectorAll('.user-item').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.getElementById('loginNombre').value = this.getAttribute('data-nombre');
+      loginPorNombre();
     });
+  });
+}
+
+function loginPorNombre() {
+  var nombre = (document.getElementById('loginNombre').value || '').trim();
+  if (!nombre) { document.getElementById('loginError').textContent = 'Escribe tu nombre'; return; }
+
+  var btn = document.getElementById('btnLoginEntrar');
+  var status = document.getElementById('loginStatus');
+  btn.disabled = true;
+  status.textContent = '🔄 Buscando…';
+
+  // Función para entrar con un usuario (local o remoto)
+  function entrarCon(u) {
+    // Guardar en recientes locales
+    var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== u.nombre.toLowerCase(); });
+    recientes.unshift({ nombre: u.nombre, colorIdx: u.colorIdx || 0 });
+    if (recientes.length > 5) recientes = recientes.slice(0, 5);
+    _LS.set('pac_recientes', recientes);
+    // Guardar en lista local de usuarios
+    var usrs = _LS.get('pac_usuarios', []);
+    var existe = false;
+    for (var i = 0; i < usrs.length; i++) { if (usrs[i].id === u.id) { existe = true; break; } }
+    if (!existe) { usrs.push(u); _LS.set('pac_usuarios', usrs); usuarios = usrs; }
+    btn.disabled = false; status.textContent = '';
+    entrarApp(u.id);
+  }
+
+  // Primero intentar Firebase
+  if (window._lookupUserByName) {
+    window._lookupUserByName(nombre).then(function(remoto) {
+      if (remoto) {
+        // Usuario encontrado en Firestore
+        status.textContent = '✅ Usuario encontrado';
+        entrarCon({ id: remoto.id, nombre: remoto.nombre, colorIdx: remoto.colorIdx });
+      } else {
+        // No existe → crear nuevo en Firestore
+        status.textContent = '🆕 Creando usuario…';
+        var colorIdx = Math.floor(Math.random() * 6);
+        window._createUserInFirestore(nombre, colorIdx).then(function(newId) {
+          if (newId) {
+            entrarCon({ id: newId, nombre: nombre, colorIdx: colorIdx });
+          } else {
+            // Firebase falló → crear solo local
+            crearUsuarioLocal(nombre);
+          }
+        });
+      }
+    }).catch(function() {
+      crearUsuarioLocal(nombre);
+    });
+  } else {
+    // Firebase no disponible → modo local
+    crearUsuarioLocal(nombre);
+  }
+
+  function crearUsuarioLocal(nombre) {
+    // Buscar si ya existe localmente
+    var usrs = _LS.get('pac_usuarios', []);
+    for (var i = 0; i < usrs.length; i++) {
+      if (usrs[i].nombre.toLowerCase() === nombre.toLowerCase()) {
+        entrarCon(usrs[i]); return;
+      }
+    }
+    var u = { id: Date.now().toString() + Math.random().toString(36).slice(2), nombre: nombre, colorIdx: Math.floor(Math.random() * 6) };
+    usrs.push(u); _LS.set('pac_usuarios', usrs); usuarios = usrs;
+    entrarCon(u);
   }
 }
 
-function registrarUsuario() {
-  var nombre = document.getElementById('regNombre').value.trim();
-  var err    = document.getElementById('regError');
-  if(!nombre) { err.textContent='El nombre es obligatorio'; return; }
-  for(var i=0;i<usuarios.length;i++) {
-    if(usuarios[i].nombre.toLowerCase()===nombre.toLowerCase()) { err.textContent='Ya existe ese usuario'; return; }
-  }
-  var u = { id: String(Date.now()), nombre: nombre, colorIdx: usuarios.length };
-  usuarios.push(u);
-  DB.set('pac_usuarios', usuarios);
-  err.textContent = '';
-  entrarApp(u.id);
-}
+function registrarUsuario() { loginPorNombre(); }
 
 function entrarApp(uid) {
   // Accept id string or user object
@@ -2458,8 +2548,8 @@ showPage = function(name) {
 };
 
 renderLoginUsers();
-var lastId=DB.get('pac_lastUser',null);
-if(lastId){ entrarApp(lastId); }
+var lastId = _LS.get('pac_lastUser', null);
+if (lastId) { entrarApp(lastId); }
 
 // ── DESCARGAR PLANTILLA ─────────────────────────────────────────
 function descargarPlantilla(mode) {
