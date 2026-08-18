@@ -498,8 +498,9 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <button id="btnVolverCampanas" style="display:none;background:var(--gris-claro);color:var(--gris);border:none;border-radius:20px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#8592; Campa&#241;as</button>
     <div id="campanasBtns" style="display:flex;flex-wrap:wrap;gap:8px;flex:1"></div>
   </div>
+  <!-- Banner novedades -->
+  <div id="bannerNovedades" style="display:none;margin-bottom:12px"></div>
   <div id="statsCultivos" style="margin-bottom:16px"></div>
-
   <div class="search-bar"><span>&#128269;</span><input type="text" id="searchPAC" placeholder="Buscar parcela..." oninput="renderPAC()"></div>
   <div id="listaPAC"></div>
 </div>
@@ -1194,7 +1195,104 @@ function iniciarApp() {
   renderCampanas();
   showPage('pac');
   bindModalEvents();
+  // Mostrar novedades al entrar
+  setTimeout(function(){ mostrarNovedades(); }, 300);
 }
+
+// ── SISTEMA DE NOVEDADES ──────────────────────────────────────────
+function mostrarNovedades() {
+  var banner = document.getElementById('bannerNovedades');
+  if (!banner) return;
+
+  var laboreos = DB.get(uk('laboreos'), []);
+  if (!laboreos.length) { banner.style.display = 'none'; return; }
+
+  // Clave de último acceso por usuario
+  var claveUltimo = 'pac_ultimo_acceso_' + ownerIdActual;
+  var ultimoAcceso = _LS.get(claveUltimo, 0);
+  var ahora = Date.now();
+
+  // Guardar timestamp de este acceso
+  _LS.set(claveUltimo, ahora);
+
+  // Si es la primera vez (ultimoAcceso=0), no mostrar nada
+  if (!ultimoAcceso) { banner.style.display = 'none'; return; }
+
+  // Filtrar laboreos nuevos desde el último acceso
+  // Usamos _ts si existe, si no usamos la fecha del laboreo
+  var nuevos = laboreos.filter(function(lb) {
+    var ts = lb._ts || 0;
+    return ts > ultimoAcceso && !lb.autoGenerado;
+  });
+
+  if (!nuevos.length) { banner.style.display = 'none'; return; }
+
+  // Agrupar por parcela
+  var porParcela = {};
+  nuevos.forEach(function(lb) {
+    var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
+    var nombre = p ? p.nombre : 'Parcela desconocida';
+    if (!porParcela[lb.parcelaId]) porParcela[lb.parcelaId] = { nombre: nombre, laboreos: [] };
+    porParcela[lb.parcelaId].laboreos.push(lb);
+  });
+
+  var ids = Object.keys(porParcela);
+  var resumen = ids.length === 1
+    ? nuevos.length + ' trabajo' + (nuevos.length>1?'s':'') + ' nuevo' + (nuevos.length>1?'s':'') + ' en <b>' + porParcela[ids[0]].nombre + '</b>'
+    : nuevos.length + ' trabajos nuevos en ' + ids.length + ' parcelas';
+
+  // Construir lista detallada
+  var detalle = '';
+  ids.forEach(function(pid) {
+    var g = porParcela[pid];
+    g.laboreos.forEach(function(lb) {
+      var fecha = lb.fecha ? ' · ' + lb.fecha : '';
+      var quien = lb._autor ? ' · ' + lb._autor : '';
+      detalle += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.15)">' +
+        '<span style="font-size:16px">' + _iconoLaboreo(lb.tipo) + '</span>' +
+        '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:13px;font-weight:700">' + g.nombre + ' — ' + lb.tipo + '</div>' +
+        '<div style="font-size:11px;opacity:0.85">' + lb.producto + fecha + quien + '</div>' +
+        '</div>' +
+        '<button onclick="verParcela(\'' + pid + '\')" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap">Ver →</button>' +
+        '</div>';
+    });
+  });
+
+  banner.innerHTML =
+    '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
+    '<div style="font-size:14px;font-weight:700">🆕 ' + resumen + '</div>' +
+    '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>' +
+    '</div>' +
+    (detalle ? '<div>' + detalle + '</div>' : '') +
+    '</div>';
+  banner.style.display = '';
+}
+
+function _iconoLaboreo(tipo) {
+  var m = {'Herbicida':'🌿','Fungicida':'🍄','Insecticida':'🐛','Siembra':'🌱','Abonado fondo':'📦','Abonado cobertera':'📦','Riego':'💧','Cosecha':'🌾','Arado':'🚜','Cultivado':'🚜'};
+  return m[tipo] || '🔧';
+}
+
+function cerrarBannerNovedades() {
+  var b = document.getElementById('bannerNovedades');
+  if (b) b.style.display = 'none';
+}
+
+function verParcela(parcelaId) {
+  cerrarBannerNovedades();
+  showPage('pac');
+  // Expandir la tarjeta de esa parcela
+  setTimeout(function() {
+    var el = document.getElementById('pb-' + parcelaId);
+    if (el) {
+      el.style.display = '';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 200);
+}
+
 
 function abrirPerfil() {
   var u = usuarioActual;
@@ -1341,7 +1439,7 @@ function showPage(name) {
   var idx = ['pac','parcelas','semillas','maquinaria','importar'].indexOf(name);
   if(idx>=0) navItems[idx].classList.add('active');
   document.getElementById('fabBtn').classList.toggle('hidden', name !== 'parcelas');
-  if(name==='pac')        renderPAC();
+  if(name==='pac')        { renderPAC(); mostrarNovedades && mostrarNovedades(); }
   if(name==='parcelas')   renderParcelas();
   if(name==='semillas')   renderSemillas();
   if(name==='maquinaria') renderMaquinaria();
@@ -2426,7 +2524,19 @@ function guardarLaboreo() {
   if(!producto){toast('Indica el producto',true);return;}
   if(!fecha){toast('Indica la fecha',true);return;}
   var laboreos=DB.get(uk('laboreos'),[]);
-  var obj={id:lineaId||(Date.now().toString()+Math.random().toString(36).slice(2)),parcelaId:parcelaId,campana:campanaActual,tipo:tipo,producto:producto,dosis:document.getElementById('laboreoDosis').value.trim(),fecha:fecha,maquinaria:document.getElementById('laboreoMaquinaria').value,notas:document.getElementById('laboreoNotas').value.trim()};
+  var obj={
+    id: lineaId||(Date.now().toString()+Math.random().toString(36).slice(2)),
+    parcelaId: parcelaId,
+    campana: campanaActual,
+    tipo: tipo,
+    producto: producto,
+    dosis: document.getElementById('laboreoDosis').value.trim(),
+    fecha: fecha,
+    maquinaria: document.getElementById('laboreoMaquinaria').value,
+    notas: document.getElementById('laboreoNotas').value.trim(),
+    _ts: lineaId ? undefined : Date.now(),
+    _autor: usuarioActual ? usuarioActual.nombre : ''
+  };
   var idx=-1; for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===obj.id){idx=i;break;}}
   if(idx>=0) laboreos[idx]=obj; else laboreos.push(obj);
   DB.set(uk('laboreos'),laboreos);
