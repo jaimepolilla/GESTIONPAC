@@ -179,14 +179,18 @@
   window._initFirebase = function(userId, onReady) {
     if (!_db) { if (onReady) onReady(null); return; }
     setSyncStatus('loading');
+    // Resetear hash para que esta sesión siempre reciba los datos frescos
+    _lastSavedHash = '';
     var docRef = _db.collection('pac_users').doc(userId);
     docRef.get().then(function(snap) {
       if (snap.exists) {
         var data = snap.data();
-        _lastSavedHash = _hash(data);
+        console.log('Datos cargados de Firestore para', userId, '- campanas:', (data.campanas||[]).length, 'parcelas:', (data.parcelas||[]).length);
         _cacheLocally(userId, data);
         if (onReady) onReady(data);
+        _lastSavedHash = _hash(data);
       } else {
+        console.warn('No existe documento en Firestore para', userId);
         if (onReady) onReady(null);
       }
       _startListener(docRef);
@@ -201,12 +205,14 @@
   // Guardar todos los datos en Firestore
   window._saveToFirestore = function() {
     if (!_db || !window.usuarioActual) return;
+    // Siempre guardar en el documento del propietario
+    var targetId = (window.ownerIdActual) || window.usuarioActual.id;
     var payload = window._buildPayload ? window._buildPayload() : null;
     if (!payload) return;
     setSyncStatus('saving');
     _isSaving = true;
     var hash = _hash(payload);
-    _db.collection('pac_users').doc(window.usuarioActual.id).set(payload)
+    _db.collection('pac_users').doc(targetId).set(payload)
       .then(function() {
         _lastSavedHash = hash;
         _isSaving = false;
@@ -1302,7 +1308,8 @@ function entrarApp(u) {
   usuarioActual = u;
   window.usuarioActual = u;
   rolActual = u.rol || 'owner';
-  ownerIdActual = u.ownerId || u.id; // datos siempre del propietario
+  ownerIdActual = u.ownerId || u.id;
+  window.ownerIdActual = ownerIdActual;
 
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('appNav').style.display = 'flex';
@@ -1327,10 +1334,17 @@ function entrarApp(u) {
     window._initFirebase(ownerIdActual, function(datosRemoto) {
       if (datosRemoto) {
         if (window._reloadUserData) window._reloadUserData(datosRemoto);
+        _arrancarVista(u, datosRemoto);
+      } else if (rolActual === 'worker') {
+        // Trabajador sin datos remotos = error de conexión, no usar localStorage vacío
+        if (window._setSyncStatus) window._setSyncStatus('offline');
+        alert('No se pudieron cargar los datos. Comprueba tu conexión e inténtalo de nuevo.');
+        showScreen('screenLogin');
       } else {
+        // Propietario: usar localStorage como fallback
         loadUserData();
+        _arrancarVista(u, null);
       }
-      _arrancarVista(u, datosRemoto);
     });
   } else {
     loadUserData();
