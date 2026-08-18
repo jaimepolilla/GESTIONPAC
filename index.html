@@ -2585,24 +2585,52 @@ function renderMaquinaria() {
   var html='<div class="card">';
   for(var i=0;i<maquinaria.length;i++){
     var m=maquinaria[i];
-    html+='<div class="maq-item"><div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div><div><div class="maq-name">'+m.nombre+'</div><div class="maq-sub">'+(m.tipo||'')+' - '+(m.marca||'')+' '+(m.modelo||'')+'</div></div><button class="maq-del maq-btn-del" data-id="'+m.id+'">&#10005;</button></div>';
+    html+='<div class="maq-item">' +
+      '<div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div>' +
+      '<div style="flex:1;min-width:0"><div class="maq-name">'+m.nombre+'</div>' +
+      '<div class="maq-sub">'+(m.tipo||'')+' — '+(m.marca||'')+' '+(m.modelo||'')+'</div></div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<button class="maq-btn-edit" data-id="'+m.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">✏️</button>' +
+      '<button class="maq-btn-del" data-id="'+m.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">✕</button>' +
+      '</div></div>';
   }
   html+='</div>';
   cont.innerHTML=html;
+  cont.querySelectorAll('.maq-btn-edit').forEach(function(btn){
+    btn.addEventListener('click', function(){ editarMaquinaria(this.getAttribute('data-id')); });
+  });
   cont.querySelectorAll('.maq-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){ eliminarMaquinaria(this.getAttribute('data-id')); });
+    btn.addEventListener('click', function(){ eliminarMaquinaria(this.getAttribute('data-id')); });
   });
 }
 
 function agregarMaquinaria() {
-  var nombre=document.getElementById('maqNombre').value.trim();
-  if(!nombre){toast('El nombre es obligatorio',true);return;}
-  var maquinaria=DB.get(uk('maquinaria'),[]);
-  maquinaria.push({id:Date.now().toString(),nombre:nombre,tipo:document.getElementById('maqTipo').value,marca:document.getElementById('maqMarca').value.trim(),modelo:document.getElementById('maqModelo').value.trim()});
-  DB.set(uk('maquinaria'),maquinaria);
-  ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('maqTipo').value='';
-  save(); renderMaquinaria(); toast('Maquina anadida');
+  var nombre = document.getElementById('maqNombre').value.trim();
+  if(!nombre){ toast('El nombre es obligatorio',true); return; }
+  var maquinaria = DB.get(uk('maquinaria'),[]);
+  var tipo   = document.getElementById('maqTipo').value;
+  var marca  = document.getElementById('maqMarca').value.trim();
+  var modelo = document.getElementById('maqModelo').value.trim();
+
+  if(_editandoMaqId) {
+    // Editar existente
+    var idx = maquinaria.findIndex(function(m){ return m.id===_editandoMaqId; });
+    if(idx !== -1) { maquinaria[idx].nombre=nombre; maquinaria[idx].tipo=tipo; maquinaria[idx].marca=marca; maquinaria[idx].modelo=modelo; }
+    _editandoMaqId = null;
+    var btn = document.getElementById('btnAnadirMaquinaria');
+    if(btn){ btn.textContent='+ Añadir maquina'; btn.removeAttribute('data-editando'); }
+    var cancelBtn = document.getElementById('btnCancelarEditMaq');
+    if(cancelBtn) cancelBtn.remove();
+    toast('Maquinaria actualizada ✔');
+  } else {
+    // Nueva
+    maquinaria.push({ id: Date.now().toString(), nombre: nombre, tipo: tipo, marca: marca, modelo: modelo });
+    toast('Máquina añadida ✔');
+  }
+  DB.set(uk('maquinaria'), maquinaria);
+  ['maqNombre','maqMarca','maqModelo'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('maqTipo').value = '';
+  save(); renderMaquinaria();
 }
 
 function eliminarMaquinaria(id) {
@@ -3011,12 +3039,30 @@ function editarMaquinaria(id) {
   var m = maquinaria.find(function(x){ return x.id===id; });
   if(!m) return;
   document.getElementById('maqNombre').value = m.nombre||'';
-  document.getElementById('maqTipo').value = m.tipo||'';
-  document.getElementById('maqMarca').value = m.marca||'';
+  document.getElementById('maqTipo').value   = m.tipo||'';
+  document.getElementById('maqMarca').value  = m.marca||'';
   document.getElementById('maqModelo').value = m.modelo||'';
   _editandoMaqId = id;
   var btn = document.getElementById('btnAnadirMaquinaria');
   if(btn){ btn.textContent='✔ Guardar cambios'; btn.setAttribute('data-editando',id); }
+  // Mostrar botón cancelar edición
+  var cancelBtn = document.getElementById('btnCancelarEditMaq');
+  if(!cancelBtn) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.id = 'btnCancelarEditMaq';
+    cancelBtn.className = 'btn-secondary';
+    cancelBtn.style.marginTop = '6px';
+    cancelBtn.textContent = 'Cancelar edición';
+    cancelBtn.onclick = function() {
+      _editandoMaqId = null;
+      var b = document.getElementById('btnAnadirMaquinaria');
+      if(b){ b.textContent='+ Añadir maquina'; b.removeAttribute('data-editando'); }
+      ['maqNombre','maqMarca','maqModelo'].forEach(function(id){ document.getElementById(id).value=''; });
+      document.getElementById('maqTipo').value='';
+      cancelBtn.remove();
+    };
+    btn.parentNode.insertBefore(cancelBtn, btn.nextSibling);
+  }
   document.getElementById('maqNombre').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('maqNombre').focus();
 }
