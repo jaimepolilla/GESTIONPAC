@@ -1313,19 +1313,32 @@ function entrarApp(u) {
 }
 
 function _aplicarPermisos() {
-  // Trabajador: solo ve Campañas (laboreos) y Campos (solo lectura)
-  // Ocultar Semillas, Maquinaria, Ajustes en nav
   var navItems = document.querySelectorAll('#appNav .nav-item');
   if (rolActual === 'worker') {
-    // Ocultar semillas (idx 2), maquinaria (idx 3), ajustes (idx 4)
+    // Nav: ocultar semillas, maquinaria, ajustes
     if (navItems[2]) navItems[2].style.display = 'none';
     if (navItems[3]) navItems[3].style.display = 'none';
     if (navItems[4]) navItems[4].style.display = 'none';
-    // Ocultar FAB (añadir parcela)
+    // FAB añadir parcela
     var fab = document.getElementById('fabBtn');
     if (fab) fab.style.display = 'none';
+    // Ocultar botón nueva campaña en PAC
+    var btnNuevaCamp = document.getElementById('btnNuevaCampana');
+    if (btnNuevaCamp) btnNuevaCamp.style.display = 'none';
+    // Añadir CSS para ocultar botones de editar/eliminar de parcelas y cultivos
+    if (!document.getElementById('workerCSS')) {
+      var style = document.createElement('style');
+      style.id = 'workerCSS';
+      style.textContent =
+        '.pac-btn-editar, .parc-btn-editar, .parc-btn-borrar, .pac-btn-borrar { display:none !important; }' +
+        '#btnNuevaCampana { display:none !important; }' +
+        '.fab { display:none !important; }';
+      document.head.appendChild(style);
+    }
   } else {
     navItems.forEach(function(n){ n.style.display = ''; });
+    var workerCSS = document.getElementById('workerCSS');
+    if (workerCSS) workerCSS.remove();
   }
 }
 
@@ -1359,22 +1372,27 @@ function mostrarNovedades() {
   var laboreos = DB.get(uk('laboreos'), []);
   if (!laboreos.length) { banner.style.display = 'none'; return; }
 
-  // Clave de último acceso por usuario
-  var claveUltimo = 'pac_ultimo_acceso_' + ownerIdActual;
+  // Clave de último acceso POR USUARIO (no por propietario)
+  var claveUltimo = 'pac_ultimo_acceso_' + usuarioActual.id;
   var ultimoAcceso = _LS.get(claveUltimo, 0);
   var ahora = Date.now();
 
   // Guardar timestamp de este acceso
   _LS.set(claveUltimo, ahora);
 
-  // Si es la primera vez (ultimoAcceso=0), no mostrar nada
+  // Primera vez: no mostrar nada, solo registrar
   if (!ultimoAcceso) { banner.style.display = 'none'; return; }
 
-  // Filtrar laboreos nuevos desde el último acceso
-  // Usamos _ts si existe, si no usamos la fecha del laboreo
+  // Filtrar laboreos nuevos: usar _ts si existe, si no convertir fecha string a timestamp
   var nuevos = laboreos.filter(function(lb) {
-    var ts = lb._ts || 0;
-    return ts > ultimoAcceso && !lb.autoGenerado;
+    if (lb.autoGenerado) return false;
+    var ts = lb._ts;
+    if (!ts && lb.fecha) {
+      // Convertir "YYYY-MM-DD" a timestamp (inicio del día)
+      var parts = lb.fecha.split('-');
+      if (parts.length === 3) ts = new Date(parts[0], parts[1]-1, parts[2]).getTime();
+    }
+    return ts && ts > ultimoAcceso;
   });
 
   if (!nuevos.length) { banner.style.display = 'none'; return; }
@@ -1393,18 +1411,18 @@ function mostrarNovedades() {
     ? nuevos.length + ' trabajo' + (nuevos.length>1?'s':'') + ' nuevo' + (nuevos.length>1?'s':'') + ' en <b>' + porParcela[ids[0]].nombre + '</b>'
     : nuevos.length + ' trabajos nuevos en ' + ids.length + ' parcelas';
 
-  // Construir lista detallada
   var detalle = '';
   ids.forEach(function(pid) {
     var g = porParcela[pid];
     g.laboreos.forEach(function(lb) {
       var fecha = lb.fecha ? ' · ' + lb.fecha : '';
       var quien = lb._autor ? ' · ' + lb._autor : '';
+      var prod  = lb.producto ? lb.producto + fecha + quien : lb.tipo + fecha + quien;
       detalle += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.15)">' +
         '<span style="font-size:16px">' + _iconoLaboreo(lb.tipo) + '</span>' +
         '<div style="flex:1;min-width:0">' +
         '<div style="font-size:13px;font-weight:700">' + g.nombre + ' — ' + lb.tipo + '</div>' +
-        '<div style="font-size:11px;opacity:0.85">' + lb.producto + fecha + quien + '</div>' +
+        '<div style="font-size:11px;opacity:0.85">' + prod + '</div>' +
         '</div>' +
         '<button onclick="verParcela(\'' + pid + '\')" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap">Ver →</button>' +
         '</div>';
@@ -1418,6 +1436,9 @@ function mostrarNovedades() {
     '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>' +
     '</div>' +
     (detalle ? '<div>' + detalle + '</div>' : '') +
+    '</div>';
+  banner.style.display = '';
+}
     '</div>';
   banner.style.display = '';
 }
