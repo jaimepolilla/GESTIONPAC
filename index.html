@@ -1356,9 +1356,16 @@ function _aplicarPermisos() {
       var style = document.createElement('style');
       style.id = 'workerCSS';
       style.textContent =
-        '.pac-btn-editar, .parc-btn-editar, .parc-btn-borrar, .pac-btn-borrar { display:none !important; }' +
-        '#btnNuevaCampana { display:none !important; }' +
-        '.fab { display:none !important; }';
+        /* Parcelas: ocultar editar y eliminar */
+        '.parc-btn-editar, .parc-btn-borrar { display:none !important; }' +
+        /* PAC cultivos: ocultar editar, borrar cultivo, añadir cultivo */
+        '.pac-btn-editar, .pac-btn-borrar, .pac-btn-anadir { display:none !important; }' +
+        /* PAC laboreos: ocultar editar y borrar laboreo (solo puede añadir) */
+        '.pac-btn-edit-laboreo, .pac-btn-del-laboreo { display:none !important; }' +
+        /* Campañas: ocultar botón eliminar campaña */
+        '.btn-del-campana { display:none !important; }' +
+        /* Botón nueva campaña y FAB añadir parcela */
+        '#btnNuevaCampana, .fab { display:none !important; }';
       document.head.appendChild(style);
     }
   } else {
