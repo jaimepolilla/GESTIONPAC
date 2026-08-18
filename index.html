@@ -14,9 +14,14 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUEFDIEdlc3Rpb24iLCJzaG9ydF9uYW1lIjoiUEFDIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZWRmM2VhIiwidGhlbWVfY29sb3IiOiIjM2Q2YjJmIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIWnBaWGRDYjNnOUlqQWdNQ0F4TURBZ01UQXdJajQ4Y21WamRDQjNhV1IwYUQwaU1UQXdJaUJvWldsbmFIUTlJakV3TUNJZ2NuZzlJakl3SWlCbWFXeHNQU0lqTTJRMllqSm1JaTgrUEhSbGVIUWdlRDBpTlRBaUlIazlJamN5SWlCbWIyNTBMWE5wZW1VOUlqWXdJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWo0bUl6RXlOemd3TmpzOEwzUmxlSFErUEM5emRtYysiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
 <title>PAC Gestion</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- Firebase SDK compat (carga síncrona, funciona en todos los navegadores) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase SDK compat -->
+<script>window._firebaseAppLoaded = false; window._firebaseFirestoreLoaded = false;</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"
+  onload="window._firebaseAppLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
+  onerror="console.error('firebase-app-compat.js falló al cargar')"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"
+  onload="window._firebaseFirestoreLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
+  onerror="console.error('firebase-firestore-compat.js falló al cargar')"></script>
 <script>
 (function() {
   var FIREBASE_CONFIG = {
@@ -33,8 +38,10 @@
   var _isSaving = false;
   var _lastSavedHash = '';
 
-  // Inicializar Firebase cuando el DOM esté listo (garantiza que los CDN han cargado)
-  function _initApp() {
+  // Inicializar solo cuando ambos SDKs hayan cargado
+  window._tryInitFirebase = function() {
+    if (!window._firebaseAppLoaded || !window._firebaseFirestoreLoaded) return;
+    if (_db) return; // ya inicializado
     try {
       if (typeof firebase === 'undefined') {
         console.error('Firebase SDK no cargado');
@@ -46,12 +53,13 @@
     } catch(e) {
       console.error('Firebase init error:', e);
     }
-  }
+  };
 
+  // También intentar en DOMContentLoaded por si los onload ya dispararon antes
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initApp);
+    document.addEventListener('DOMContentLoaded', window._tryInitFirebase);
   } else {
-    _initApp();
+    window._tryInitFirebase();
   }
 
   function _hash(obj) {
@@ -156,6 +164,21 @@
   // Buscar usuario por nombre + verificar contraseña
   // Devuelve: objeto usuario | 'wrong_password' | null
   window._lookupUserByName = function(nombre, passHash) {
+    // Si Firebase no está listo todavía, esperar hasta 3 segundos
+    if (!_db) {
+      return new Promise(function(resolve) {
+        var attempts = 0;
+        var interval = setInterval(function() {
+          attempts++;
+          if (_db) { clearInterval(interval); resolve(_doLookup(nombre, passHash)); }
+          else if (attempts > 15) { clearInterval(interval); resolve(null); }
+        }, 200);
+      });
+    }
+    return _doLookup(nombre, passHash);
+  };
+
+  function _doLookup(nombre, passHash) {
     if (!_db) return Promise.resolve(null);
     var nombreNorm = nombre.toLowerCase().trim();
     // Buscar primero en propietarios
@@ -197,7 +220,7 @@
         });
       })
       .catch(function(e) { console.error('lookup error:', e); return null; });
-  };
+  }
 
   // Crear trabajador en subcolección workers del propietario
   window._createWorker = function(ownerId, nombre, passHash, colorIdx) {
