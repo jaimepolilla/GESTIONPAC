@@ -1414,9 +1414,13 @@ function mostrarNovedades() {
   var claveLocal = 'pac_ultimo_acceso_' + usuarioActual.id;
 
   function _render(ultimoAcceso) {
-    _LS.set(claveLocal, ahora);
-    _guardarUltimoAcceso(ahora);
-    if (!ultimoAcceso) { banner.style.display = 'none'; return; }
+    if (!ultimoAcceso) {
+      // Primera vez: solo guardar timestamp, no mostrar nada
+      _LS.set(claveLocal, ahora);
+      _guardarUltimoAcceso(ahora);
+      banner.style.display = 'none';
+      return;
+    }
 
     var nuevos = laboreos.filter(function(lb) {
       if (lb.autoGenerado) return false;
@@ -1509,6 +1513,11 @@ function _iconoLaboreo(tipo) {
 function cerrarBannerNovedades() {
   var b = document.getElementById('bannerNovedades');
   if (b) b.style.display = 'none';
+  // Guardar timestamp AHORA que el usuario confirmó que lo vio
+  var claveLocal = 'pac_ultimo_acceso_' + usuarioActual.id;
+  var ahora = Date.now();
+  _LS.set(claveLocal, ahora);
+  _guardarUltimoAcceso(ahora);
 }
 
 function verParcela(parcelaId) {
@@ -1709,7 +1718,7 @@ function showPage(name) {
   var idx = ['pac','parcelas','semillas','maquinaria','importar'].indexOf(name);
   if(idx>=0) navItems[idx].classList.add('active');
   document.getElementById('fabBtn').classList.toggle('hidden', name !== 'parcelas');
-  if(name==='pac')        { renderPAC(); mostrarNovedades && mostrarNovedades(); }
+  if(name==='pac')        { renderPAC(); }
   if(name==='parcelas')   renderParcelas();
   if(name==='semillas')   renderSemillas();
   if(name==='maquinaria') renderMaquinaria();
