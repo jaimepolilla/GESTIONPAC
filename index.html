@@ -1490,7 +1490,7 @@ function _guardarUltimoAcceso(ts) {
   var docRef = rolActual === 'worker'
     ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(usuarioActual.id)
     : db.collection('pac_users').doc(usuarioActual.id);
-  docRef.update({ _ultimoAcceso: ts }).catch(function(){});
+  docRef.set({ _ultimoAcceso: ts }, { merge: true }).catch(function(e){ console.warn('guardarUltimoAcceso error:', e); });
 }
 
 
