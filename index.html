@@ -23,8 +23,8 @@
   onload="window._firebaseFirestoreLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
   onerror="console.error('firebase-firestore-compat.js falló al cargar')"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"
-  onload="window._firebaseAuthLoaded=true;window._tryInitFirebase&&window._tryInitFirebase();"
-  onerror="console.error('firebase-auth-compat.js falló al cargar')"></script>
+  onload="window._firebaseAuthLoaded=true;window._tryInitAuth&&window._tryInitAuth();window._tryInitFirebase&&window._tryInitFirebase();"
+  onerror="console.warn('firebase-auth-compat.js no disponible - recuperación de contraseña desactivada')"></script>
 <script>
 (function() {
   var FIREBASE_CONFIG = {
@@ -40,24 +40,40 @@
   var _unsubscribe = null;
   var _isSaving = false;
   var _lastSavedHash = '';
-
-  // Inicializar solo cuando ambos SDKs hayan cargado
   var _auth = null;
 
   window._tryInitFirebase = function() {
-    if (!window._firebaseAppLoaded || !window._firebaseFirestoreLoaded || !window._firebaseAuthLoaded) return;
+    // Solo necesitamos app + firestore. Auth es opcional.
+    if (!window._firebaseAppLoaded || !window._firebaseFirestoreLoaded) return;
     if (_db) return;
     try {
       if (typeof firebase === 'undefined') { console.error('Firebase SDK no cargado'); return; }
       firebase.initializeApp(FIREBASE_CONFIG);
-      _db   = firebase.firestore();
-      _auth = firebase.auth();
-      // Configurar idioma español para emails de recuperación
-      _auth.languageCode = 'es';
-      console.log('Firebase listo');
+      _db = firebase.firestore();
+      console.log('Firebase Firestore listo');
+      // Auth si está disponible
+      if (window._firebaseAuthLoaded && firebase.auth) {
+        try {
+          _auth = firebase.auth();
+          _auth.languageCode = 'es';
+          console.log('Firebase Auth listo');
+        } catch(e) { console.warn('Auth no disponible:', e); }
+      }
     } catch(e) { console.error('Firebase init error:', e); }
   };
   window._getAuth = function() { return _auth; };
+
+  // Intentar también cuando Auth cargue (por si Firestore ya estaba listo)
+  window._tryInitAuth = function() {
+    if (!_db || _auth) return;
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        _auth = firebase.auth();
+        _auth.languageCode = 'es';
+        console.log('Firebase Auth listo (tardío)');
+      } catch(e) {}
+    }
+  };
 
   // DOMContentLoaded fallback
   if (document.readyState === 'loading') {
@@ -205,14 +221,18 @@
   // Buscar usuario por nombre + verificar contraseña
   // Devuelve: objeto usuario | 'wrong_password' | null
   window._lookupUserByName = function(nombre, passHash) {
-    // Si Firebase no está listo todavía, esperar hasta 3 segundos
     if (!_db) {
       return new Promise(function(resolve) {
         var attempts = 0;
         var interval = setInterval(function() {
           attempts++;
-          if (_db) { clearInterval(interval); resolve(_doLookup(nombre, passHash)); }
-          else if (attempts > 15) { clearInterval(interval); resolve(null); }
+          if (_db) {
+            clearInterval(interval);
+            resolve(_doLookup(nombre, passHash));
+          } else if (attempts > 30) { // 6 segundos
+            clearInterval(interval);
+            resolve(null);
+          }
         }, 200);
       });
     }
@@ -1217,6 +1237,11 @@ function loginPorNombre() {
     }
     window._lookupUserByName(nombre, passHash).then(function(resultado) {
       btn.disabled = false; status.textContent = '';
+
+      if (resultado === null && !window._getDB()) {
+        errEl.textContent = 'No se pudo conectar con Firebase. Recarga la página e inténtalo de nuevo.';
+        return;
+      }
 
       if (resultado === 'wrong_password') {
         errEl.textContent = 'Contraseña incorrecta';
