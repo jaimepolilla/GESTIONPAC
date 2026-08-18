@@ -502,7 +502,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <input type="text" id="loginNombre" placeholder="Tu nombre" maxlength="30"
       autocomplete="username" autocorrect="off" autocapitalize="words" spellcheck="false"
       onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()"
-      oninput="document.getElementById('loginError').textContent=''">
+      oninput="document.getElementById('loginError').textContent='';document.getElementById('loginEmailWrap').style.display='none';">
     <label style="margin-top:12px">Contraseña</label>
     <input type="password" id="loginPass" placeholder="Contraseña" maxlength="50"
       autocomplete="current-password"
@@ -1192,49 +1192,50 @@ function loginPorNombre() {
 
   btn.disabled = true;
   errEl.textContent = '';
+  errEl.style.color = 'var(--rojo)';
   status.textContent = '🔄 Verificando…';
+
+  // Si el campo email está visible es la segunda pulsación (usuario nuevo confirmado)
+  var emailWrap = document.getElementById('loginEmailWrap');
+  var esSegundaPulsacion = emailWrap && emailWrap.style.display !== 'none';
+
+  if (esSegundaPulsacion) {
+    var email = (document.getElementById('loginEmail').value || '').trim();
+    status.textContent = '🆕 Creando usuario…';
+    hashPassword(pass).then(function(passHash) {
+      var colorIdx = Math.floor(Math.random() * 6);
+      _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx);
+    });
+    return;
+  }
 
   hashPassword(pass).then(function(passHash) {
     if (!window._lookupUserByName) {
       btn.disabled = false; status.textContent = '';
-      errEl.textContent = 'Sin conexión a Firebase';
+      errEl.textContent = 'Sin conexión a Firebase. Espera unos segundos y vuelve a intentarlo.';
       return;
     }
     window._lookupUserByName(nombre, passHash).then(function(resultado) {
       btn.disabled = false; status.textContent = '';
-
-      if (!resultado) {
-        // Usuario no existe → mostrar campo email para registro
-        var emailWrap = document.getElementById('loginEmailWrap');
-        if (emailWrap.style.display === 'none') {
-          emailWrap.style.display = '';
-          errEl.textContent = 'Usuario nuevo. Añade tu email para poder recuperar la contraseña.';
-          errEl.style.color = 'var(--naranja)';
-          document.getElementById('loginEmail').focus();
-          btn.disabled = false;
-          return;
-        }
-        // Segunda pulsación con email → crear usuario
-        var email = (document.getElementById('loginEmail').value || '').trim();
-        errEl.style.color = 'var(--rojo)';
-        status.textContent = '🆕 Creando usuario…';
-        btn.disabled = true;
-        var colorIdx = Math.floor(Math.random() * 6);
-        _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx);
-        return;
-      }
 
       if (resultado === 'wrong_password') {
         errEl.textContent = 'Contraseña incorrecta';
         return;
       }
 
-      errEl.style.color = 'var(--rojo)';
+      if (!resultado) {
+        // Usuario no existe → pedir email para registrarse
+        if (emailWrap) emailWrap.style.display = '';
+        errEl.style.color = '#d35400';
+        errEl.textContent = 'Usuario no encontrado. Si eres nuevo, añade tu email y pulsa Entrar de nuevo.';
+        document.getElementById('loginEmail').focus();
+        return;
+      }
+
       // Login correcto
       var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== resultado.nombre.toLowerCase(); });
       recientes.unshift({ nombre: resultado.nombre, colorIdx: resultado.colorIdx || 0 });
       _LS.set('pac_recientes', recientes.slice(0, 3));
-      _LS.set('pac_lastUser', resultado.id);
       entrarApp(resultado);
     });
   });
