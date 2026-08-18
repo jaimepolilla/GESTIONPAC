@@ -895,8 +895,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
         <option value="Otro">Otro</option>
       </optgroup>
     </select>
-    <label>Producto / Descripcion *</label>
-    <input type="text" id="laboreoProducto" placeholder="Ej: Roundup, Urea 46%...">
+    <!-- Producto: oculto para tipos que no lo necesitan -->
+    <div id="laboreoProductoDiv">
+      <label>Producto / Descripcion *</label>
+      <input type="text" id="laboreoProducto" placeholder="Ej: Roundup, Urea 46%...">
+    </div>
     <!-- Tipo siembra - solo visible cuando tipo=Siembra -->
     <div id="laboreoTipoSiembraDiv" style="display:none">
       <label>Tipo de siembra *</label>
@@ -1023,7 +1026,7 @@ setTimeout(function(){
   window.renderMaquinaria = renderMaquinaria;
 },100);
 
-function uk(key) { return 'u_' + usuarioActual.id + '_' + key; }
+function uk(key) { return 'u_' + ownerIdActual + '_' + key; }
 
 function loadUserData() {
   campanaActual = DB.get(uk('campanaActual'), '');
@@ -2700,12 +2703,18 @@ function abrirModalLaboreo(parcelaId, lineaId) {
   document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
   document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
-  // Show/hide tipo siembra based on tipo selection
+  // Tipos que NO necesitan producto
+  var TIPOS_SIN_PRODUCTO = ['Arado','Cultivado','Cosecha','Riego'];
+
   function toggleTipoSiembra() {
     var tipo = document.getElementById('laboreoTipo').value;
-    var div = document.getElementById('laboreoTipoSiembraDiv');
+    var div  = document.getElementById('laboreoTipoSiembraDiv');
+    var prodDiv = document.getElementById('laboreoProductoDiv');
     if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
+    if(prodDiv) prodDiv.style.display = TIPOS_SIN_PRODUCTO.indexOf(tipo) !== -1 ? 'none' : '';
     if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
+    // Limpiar producto si no aplica
+    if(TIPOS_SIN_PRODUCTO.indexOf(tipo) !== -1) document.getElementById('laboreoProducto').value = '';
   }
   document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
   toggleTipoSiembra();
@@ -2735,9 +2744,10 @@ function guardarLaboreo() {
   var producto=document.getElementById('laboreoProducto').value.trim();
   var fecha=document.getElementById('laboreoFecha').value;
   var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
+  var tiposSinProducto = ['Arado','Cultivado','Cosecha','Riego'];
   if(!tipo){toast('Selecciona el tipo de labor',true);return;}
   if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
-  if(!producto){toast('Indica el producto',true);return;}
+  if(tiposSinProducto.indexOf(tipo)===-1 && !producto){toast('Indica el producto',true);return;}
   if(!fecha){toast('Indica la fecha',true);return;}
   var laboreos=DB.get(uk('laboreos'),[]);
   var obj={
