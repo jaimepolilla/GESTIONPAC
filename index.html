@@ -97,12 +97,13 @@ window._initFirebase = function(userId) {
       const data = snap.data();
       if (!data || !data.parcelas) return;
 
-      // Ignorar si el cambio vino de este dispositivo
+      // Ignorar si estamos guardando (evita loop) o si el cambio vino de este dispositivo
+      if (_isSaving) return;
       const hash = _hashData(data);
       if (hash === _lastSavedHash) return;
       _lastSavedHash = hash;
 
-      // Aplicar datos remotos a las variables globales y localStorage
+      // Aplicar datos remotos
       window._applyRemoteData(data);
     }, function() {
       setSyncStatus('offline');
@@ -114,6 +115,8 @@ window._initFirebase = function(userId) {
   }
 };
 
+let _isSaving = false;
+
 // Guarda todos los datos del usuario en Firestore
 window._saveToFirestore = function() {
   if (!_syncEnabled || !_db || !window.usuarioActual) return;
@@ -122,11 +125,14 @@ window._saveToFirestore = function() {
   const payload = _buildUserPayload();
   if (!payload) return;
   setSyncStatus('saving');
+  _isSaving = true;
   const hash = _hashData(payload);
   setDoc(docRef, payload).then(function() {
     _lastSavedHash = hash;
+    _isSaving = false;
     setSyncStatus('ok');
   }).catch(function() {
+    _isSaving = false;
     setSyncStatus('offline');
   });
 };
@@ -193,22 +199,18 @@ window._applyRemoteData = function(data) {
   LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
   LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
 
-  // Actualizar variables en memoria
-  window.campanaActual = data.campanaActual || '';
-  window.campanas      = data.campanas      || [];
-  window.parcelas      = data.parcelas      || [];
-  window.semillas      = data.semillas      || [];
-  window.declaraciones = data.declaraciones || [];
+  // Actualizar variables globales del JS principal vía función expuesta
+  if (window._reloadUserData) window._reloadUserData(data);
 
   // Rerenderizar la vista activa
-  if (typeof window.renderCampanas === 'function') window.renderCampanas();
+  if (typeof renderCampanas === 'function') renderCampanas();
   const activePage = document.querySelector('.page.active');
   if (activePage) {
     const name = activePage.id.replace('page-','');
-    if (name === 'pac')        { if(typeof window.renderPAC       === 'function') window.renderPAC(); }
-    if (name === 'parcelas')   { if(typeof window.renderParcelas  === 'function') window.renderParcelas(); }
-    if (name === 'semillas')   { if(typeof window.renderSemillas  === 'function') window.renderSemillas(); }
-    if (name === 'maquinaria') { if(typeof window.renderMaquinaria=== 'function') window.renderMaquinaria(); }
+    if (name === 'pac')        { if(typeof renderPAC        === 'function') renderPAC(); }
+    if (name === 'parcelas')   { if(typeof renderParcelas   === 'function') renderParcelas(); }
+    if (name === 'semillas')   { if(typeof renderSemillas   === 'function') renderSemillas(); }
+    if (name === 'maquinaria') { if(typeof renderMaquinaria === 'function') renderMaquinaria(); }
   }
   setSyncStatus('ok');
 };
@@ -837,12 +839,19 @@ var filtroActual = 'todos';
 
 // Exponer funciones al módulo Firebase
 window._toast = function(msg,err){ toast(msg,err); };
+window._reloadUserData = function(data) {
+  campanaActual = data.campanaActual || '';
+  campanas      = data.campanas      || [];
+  parcelas      = data.parcelas      || [];
+  semillas      = data.semillas      || [];
+  declaraciones = data.declaraciones || [];
+};
 setTimeout(function(){
-  window.renderCampanas   = function(){ if(typeof renderCampanas   !=='undefined') renderCampanas(); };
-  window.renderPAC        = function(){ if(typeof renderPAC        !=='undefined') renderPAC(); };
-  window.renderParcelas   = function(){ if(typeof renderParcelas   !=='undefined') renderParcelas(); };
-  window.renderSemillas   = function(){ if(typeof renderSemillas   !=='undefined') renderSemillas(); };
-  window.renderMaquinaria = function(){ if(typeof renderMaquinaria !=='undefined') renderMaquinaria(); };
+  window.renderCampanas   = renderCampanas;
+  window.renderPAC        = renderPAC;
+  window.renderParcelas   = renderParcelas;
+  window.renderSemillas   = renderSemillas;
+  window.renderMaquinaria = renderMaquinaria;
 },100);
 
 function uk(key) { return 'u_' + usuarioActual.id + '_' + key; }
@@ -899,166 +908,6 @@ function restaurarCopiaLogin(event) {
       DB.set('u_'+uid+'_parcelas',      datos.parcelas      || []);
       DB.set('u_'+uid+'_semillas',      datos.semillas      || []);
       DB.set('u_'+uid+'_declaraciones', datos.declaraciones || []);
-      function mostrarConfirmacion(titulo, mensaje, callback) {
-  document.getElementById('confirmarTitulo').textContent = titulo;
-  document.getElementById('confirmarMensaje').textContent = mensaje;
-  var btn = document.getElementById('btnConfirmarSi');
-  btn.onclick = function(){ cerrarModal('modalConfirmar'); callback(); };
-  document.getElementById('modalConfirmar').classList.add('open');
-}
-
-function renderMaquinaria() {
-  var maquinaria = DB.get(uk('maquinaria'),[]);
-  var cont = document.getElementById('listaMaquinaria');
-  if(!maquinaria.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">&#x1F69C;</div><div class="empty-text">Sin maquinaria anadida</div></div>'; return; }
-  var iconos={'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;','Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;','Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
-  var html='<div class="card">';
-  for(var i=0;i<maquinaria.length;i++){
-    var m=maquinaria[i];
-    html+='<div class="maq-item"><div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div><div><div class="maq-name">'+m.nombre+'</div><div class="maq-sub">'+(m.tipo||'')+' - '+(m.marca||'')+' '+(m.modelo||'')+'</div></div><button class="maq-del maq-btn-del" data-id="'+m.id+'">&#10005;</button></div>';
-  }
-  html+='</div>';
-  cont.innerHTML=html;
-  cont.querySelectorAll('.maq-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){ eliminarMaquinaria(this.getAttribute('data-id')); });
-  });
-}
-
-function agregarMaquinaria() {
-  var nombre=document.getElementById('maqNombre').value.trim();
-  if(!nombre){toast('El nombre es obligatorio',true);return;}
-  var maquinaria=DB.get(uk('maquinaria'),[]);
-  maquinaria.push({id:Date.now().toString(),nombre:nombre,tipo:document.getElementById('maqTipo').value,marca:document.getElementById('maqMarca').value.trim(),modelo:document.getElementById('maqModelo').value.trim()});
-  DB.set(uk('maquinaria'),maquinaria);
-  ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('maqTipo').value='';
-  renderMaquinaria(); toast('Maquina anadida');
-}
-
-function eliminarMaquinaria(id) {
-  var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
-}
-
-var fitoTemp=[], fertTemp=[];
-
-function renderFitoList() {
-  var cont=document.getElementById('listaFitosanitarios'); if(!cont) return;
-  if(!fitoTemp.length){cont.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Sin aplicaciones registradas</div>';return;}
-  cont.innerHTML=fitoTemp.map(function(f,i){return '<div class="fito-item"><div class="fito-item-info"><strong>'+f.producto+'</strong> - '+f.dosis+(f.fecha?' - '+f.fecha:'')+(f.motivo?' - '+f.motivo:'')+'</div><button class="fito-item-del" data-idx="'+i+'">&#10005;</button></div>';}).join('');
-  cont.querySelectorAll('.fito-item-del').forEach(function(btn){btn.addEventListener('click',function(){fitoTemp.splice(parseInt(this.getAttribute('data-idx')),1);renderFitoList();});});
-}
-
-function renderFertList() {
-  var cont=document.getElementById('listaFertilizacion'); if(!cont) return;
-  if(!fertTemp.length){cont.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Sin fertilizaciones registradas</div>';return;}
-  cont.innerHTML=fertTemp.map(function(f,i){return '<div class="fert-item"><div class="fert-item-info"><strong>'+f.producto+'</strong> - '+f.dosis+(f.fecha?' - '+f.fecha:'')+(f.tipo?' - '+f.tipo:'')+'</div><button class="fert-item-del" data-idx="'+i+'">&#10005;</button></div>';}).join('');
-  cont.querySelectorAll('.fert-item-del').forEach(function(btn){btn.addEventListener('click',function(){fertTemp.splice(parseInt(this.getAttribute('data-idx')),1);renderFertList();});});
-}
-
-function anadirFito() {
-  var prod=document.getElementById('fitoProducto').value.trim(); if(!prod){toast('Indica el producto',true);return;}
-  fitoTemp.push({producto:prod,dosis:document.getElementById('fitoDosis').value.trim(),fecha:document.getElementById('fitoFecha').value,motivo:document.getElementById('fitoMotivo').value.trim()});
-  ['fitoProducto','fitoDosis','fitoFecha','fitoMotivo'].forEach(function(id){document.getElementById(id).value='';});
-  renderFitoList();
-}
-
-function anadirFert() {
-  var prod=document.getElementById('fertProducto').value.trim(); if(!prod){toast('Indica el producto',true);return;}
-  fertTemp.push({producto:prod,dosis:document.getElementById('fertDosis').value.trim(),fecha:document.getElementById('fertFecha').value,tipo:document.getElementById('fertTipo').value.trim()});
-  ['fertProducto','fertDosis','fertFecha','fertTipo'].forEach(function(id){document.getElementById(id).value='';});
-  renderFertList();
-}
-
-function abrirModalLaboreo(parcelaId, lineaId) {
-  var p=null; for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===parcelaId){p=parcelas[i];break;}}
-  if(!p) return;
-  document.getElementById('laboreoParcelaId').value=parcelaId;
-  document.getElementById('laboreoLineaId').value=lineaId||'';
-  document.getElementById('laboreoParcelaNombre').textContent=p.nombre;
-  document.getElementById('laboreoParcelaMeta').textContent=(p.municipio||'')+(p.superficie?' | '+p.superficie+' ha':'');
-  var maquinaria=DB.get(uk('maquinaria'),[]);
-  var selMaq=document.getElementById('laboreoMaquinaria');
-  selMaq.innerHTML='<option value="">-- Sin especificar --</option>';
-  for(var i=0;i<maquinaria.length;i++) selMaq.innerHTML+='<option value="'+maquinaria[i].nombre+'">'+maquinaria[i].nombre+'</option>';
-  if(lineaId){
-    var laboreos=DB.get(uk('laboreos'),[]);
-    for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===lineaId){var d=laboreos[i];
-      document.getElementById('laboreoTipo').value=d.tipo||'';
-      document.getElementById('laboreoProducto').value=d.producto||'';
-      document.getElementById('laboreoDosis').value=d.dosis||'';
-      document.getElementById('laboreoFecha').value=d.fecha||'';
-      document.getElementById('laboreoMaquinaria').value=d.maquinaria||'';
-      document.getElementById('laboreoNotas').value=d.notas||'';
-      document.getElementById('laboreoTipoSiembra').value=d.tipoSiembra||'';
-      break;}}
-  } else {
-    ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
-    document.getElementById('laboreoMaquinaria').value='';
-    document.getElementById('laboreoTipoSiembra').value='';
-    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
-  }
-  document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
-  document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
-  // Show/hide tipo siembra based on tipo selection
-  function toggleTipoSiembra() {
-    var tipo = document.getElementById('laboreoTipo').value;
-    var div = document.getElementById('laboreoTipoSiembraDiv');
-    if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
-    if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
-  }
-  document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
-  toggleTipoSiembra();
-  // Bind tipo siembra buttons - scoped to modalCultivo
-  document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
-    btn.onclick = function(){
-      document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
-      this.classList.add('activo');
-      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
-    };
-  });
-  // Bind laboreo siembra buttons
-  document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
-    btn.onclick = function(){
-      document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
-      this.classList.add('activo');
-      document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
-    };
-  });
-  document.getElementById('modalLaboreo').classList.add('open');
-}
-
-function guardarLaboreo() {
-  var parcelaId=document.getElementById('laboreoParcelaId').value;
-  var lineaId=document.getElementById('laboreoLineaId').value;
-  var tipo=document.getElementById('laboreoTipo').value;
-  var producto=document.getElementById('laboreoProducto').value.trim();
-  var fecha=document.getElementById('laboreoFecha').value;
-  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
-  if(!tipo){toast('Selecciona el tipo de labor',true);return;}
-  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
-  if(!producto){toast('Indica el producto',true);return;}
-  if(!fecha){toast('Indica la fecha',true);return;}
-  var laboreos=DB.get(uk('laboreos'),[]);
-  var obj={id:lineaId||(Date.now().toString()+Math.random().toString(36).slice(2)),parcelaId:parcelaId,campana:campanaActual,tipo:tipo,producto:producto,dosis:document.getElementById('laboreoDosis').value.trim(),fecha:fecha,maquinaria:document.getElementById('laboreoMaquinaria').value,notas:document.getElementById('laboreoNotas').value.trim()};
-  var idx=-1; for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===obj.id){idx=i;break;}}
-  if(idx>=0) laboreos[idx]=obj; else laboreos.push(obj);
-  DB.set(uk('laboreos'),laboreos);
-  cerrarModal('modalLaboreo'); renderPAC(); toast(lineaId?'Laboreo actualizado':'Laboreo registrado');
-}
-
-function eliminarLaboreo(lineaId) {
-  mostrarConfirmacion('Eliminar laboreo','Se eliminara este registro de laboreo.',function(){
-    var laboreos=DB.get(uk('laboreos'),[]).filter(function(d){return d.id!==lineaId;});
-    DB.set(uk('laboreos'),laboreos); renderPAC(); toast('Laboreo eliminado');
-  });
-}
-
-// Bind Ajustes buttons on page show
-
-
 renderLoginUsers();
       alert('Datos de ' + nombreUsuario + ' restaurados. Ya puedes seleccionar tu usuario.');
     } catch(err) {
@@ -1226,167 +1075,6 @@ function cerrarSesionConfirm() {
   document.getElementById('appNav').style.display = 'none';
   var pages = document.querySelectorAll('.page');
   for(var i=0;i<pages.length;i++) pages[i].classList.remove('active');
-  function mostrarConfirmacion(titulo, mensaje, callback) {
-  document.getElementById('confirmarTitulo').textContent = titulo;
-  document.getElementById('confirmarMensaje').textContent = mensaje;
-  var btn = document.getElementById('btnConfirmarSi');
-  btn.onclick = function(){ cerrarModal('modalConfirmar'); callback(); };
-  document.getElementById('modalConfirmar').classList.add('open');
-}
-
-function renderMaquinaria() {
-  var maquinaria = DB.get(uk('maquinaria'),[]);
-  var cont = document.getElementById('listaMaquinaria');
-  if(!maquinaria.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">&#x1F69C;</div><div class="empty-text">Sin maquinaria anadida</div></div>'; return; }
-  var iconos={'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;','Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;','Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
-  var html='<div class="card">';
-  for(var i=0;i<maquinaria.length;i++){
-    var m=maquinaria[i];
-    html+='<div class="maq-item"><div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div><div><div class="maq-name">'+m.nombre+'</div><div class="maq-sub">'+(m.tipo||'')+' - '+(m.marca||'')+' '+(m.modelo||'')+'</div></div><button class="maq-del maq-btn-del" data-id="'+m.id+'">&#10005;</button></div>';
-  }
-  html+='</div>';
-  cont.innerHTML=html;
-  cont.querySelectorAll('.maq-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){ eliminarMaquinaria(this.getAttribute('data-id')); });
-  });
-}
-
-function agregarMaquinaria() {
-  var nombre=document.getElementById('maqNombre').value.trim();
-  if(!nombre){toast('El nombre es obligatorio',true);return;}
-  var maquinaria=DB.get(uk('maquinaria'),[]);
-  maquinaria.push({id:Date.now().toString(),nombre:nombre,tipo:document.getElementById('maqTipo').value,marca:document.getElementById('maqMarca').value.trim(),modelo:document.getElementById('maqModelo').value.trim()});
-  DB.set(uk('maquinaria'),maquinaria);
-  ['maqNombre','maqMarca','maqModelo'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('maqTipo').value='';
-  renderMaquinaria(); toast('Maquina anadida');
-}
-
-function eliminarMaquinaria(id) {
-  var maquinaria=DB.get(uk('maquinaria'),[]).filter(function(m){return m.id!==id;});
-  DB.set(uk('maquinaria'),maquinaria); renderMaquinaria(); toast('Maquina eliminada');
-}
-
-var fitoTemp=[], fertTemp=[];
-
-function renderFitoList() {
-  var cont=document.getElementById('listaFitosanitarios'); if(!cont) return;
-  if(!fitoTemp.length){cont.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Sin aplicaciones registradas</div>';return;}
-  cont.innerHTML=fitoTemp.map(function(f,i){return '<div class="fito-item"><div class="fito-item-info"><strong>'+f.producto+'</strong> - '+f.dosis+(f.fecha?' - '+f.fecha:'')+(f.motivo?' - '+f.motivo:'')+'</div><button class="fito-item-del" data-idx="'+i+'">&#10005;</button></div>';}).join('');
-  cont.querySelectorAll('.fito-item-del').forEach(function(btn){btn.addEventListener('click',function(){fitoTemp.splice(parseInt(this.getAttribute('data-idx')),1);renderFitoList();});});
-}
-
-function renderFertList() {
-  var cont=document.getElementById('listaFertilizacion'); if(!cont) return;
-  if(!fertTemp.length){cont.innerHTML='<div style="font-size:13px;color:#aaa;padding:4px 0">Sin fertilizaciones registradas</div>';return;}
-  cont.innerHTML=fertTemp.map(function(f,i){return '<div class="fert-item"><div class="fert-item-info"><strong>'+f.producto+'</strong> - '+f.dosis+(f.fecha?' - '+f.fecha:'')+(f.tipo?' - '+f.tipo:'')+'</div><button class="fert-item-del" data-idx="'+i+'">&#10005;</button></div>';}).join('');
-  cont.querySelectorAll('.fert-item-del').forEach(function(btn){btn.addEventListener('click',function(){fertTemp.splice(parseInt(this.getAttribute('data-idx')),1);renderFertList();});});
-}
-
-function anadirFito() {
-  var prod=document.getElementById('fitoProducto').value.trim(); if(!prod){toast('Indica el producto',true);return;}
-  fitoTemp.push({producto:prod,dosis:document.getElementById('fitoDosis').value.trim(),fecha:document.getElementById('fitoFecha').value,motivo:document.getElementById('fitoMotivo').value.trim()});
-  ['fitoProducto','fitoDosis','fitoFecha','fitoMotivo'].forEach(function(id){document.getElementById(id).value='';});
-  renderFitoList();
-}
-
-function anadirFert() {
-  var prod=document.getElementById('fertProducto').value.trim(); if(!prod){toast('Indica el producto',true);return;}
-  fertTemp.push({producto:prod,dosis:document.getElementById('fertDosis').value.trim(),fecha:document.getElementById('fertFecha').value,tipo:document.getElementById('fertTipo').value.trim()});
-  ['fertProducto','fertDosis','fertFecha','fertTipo'].forEach(function(id){document.getElementById(id).value='';});
-  renderFertList();
-}
-
-function abrirModalLaboreo(parcelaId, lineaId) {
-  var p=null; for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===parcelaId){p=parcelas[i];break;}}
-  if(!p) return;
-  document.getElementById('laboreoParcelaId').value=parcelaId;
-  document.getElementById('laboreoLineaId').value=lineaId||'';
-  document.getElementById('laboreoParcelaNombre').textContent=p.nombre;
-  document.getElementById('laboreoParcelaMeta').textContent=(p.municipio||'')+(p.superficie?' | '+p.superficie+' ha':'');
-  var maquinaria=DB.get(uk('maquinaria'),[]);
-  var selMaq=document.getElementById('laboreoMaquinaria');
-  selMaq.innerHTML='<option value="">-- Sin especificar --</option>';
-  for(var i=0;i<maquinaria.length;i++) selMaq.innerHTML+='<option value="'+maquinaria[i].nombre+'">'+maquinaria[i].nombre+'</option>';
-  if(lineaId){
-    var laboreos=DB.get(uk('laboreos'),[]);
-    for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===lineaId){var d=laboreos[i];
-      document.getElementById('laboreoTipo').value=d.tipo||'';
-      document.getElementById('laboreoProducto').value=d.producto||'';
-      document.getElementById('laboreoDosis').value=d.dosis||'';
-      document.getElementById('laboreoFecha').value=d.fecha||'';
-      document.getElementById('laboreoMaquinaria').value=d.maquinaria||'';
-      document.getElementById('laboreoNotas').value=d.notas||'';
-      document.getElementById('laboreoTipoSiembra').value=d.tipoSiembra||'';
-      break;}}
-  } else {
-    ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
-    document.getElementById('laboreoMaquinaria').value='';
-    document.getElementById('laboreoTipoSiembra').value='';
-    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
-  }
-  document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
-  document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
-  // Show/hide tipo siembra based on tipo selection
-  function toggleTipoSiembra() {
-    var tipo = document.getElementById('laboreoTipo').value;
-    var div = document.getElementById('laboreoTipoSiembraDiv');
-    if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
-    if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
-  }
-  document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
-  toggleTipoSiembra();
-  // Bind tipo siembra buttons - scoped to modalCultivo
-  document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
-    btn.onclick = function(){
-      document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
-      this.classList.add('activo');
-      document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
-    };
-  });
-  // Bind laboreo siembra buttons
-  document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
-    btn.onclick = function(){
-      document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
-      this.classList.add('activo');
-      document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
-    };
-  });
-  document.getElementById('modalLaboreo').classList.add('open');
-}
-
-function guardarLaboreo() {
-  var parcelaId=document.getElementById('laboreoParcelaId').value;
-  var lineaId=document.getElementById('laboreoLineaId').value;
-  var tipo=document.getElementById('laboreoTipo').value;
-  var producto=document.getElementById('laboreoProducto').value.trim();
-  var fecha=document.getElementById('laboreoFecha').value;
-  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
-  if(!tipo){toast('Selecciona el tipo de labor',true);return;}
-  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
-  if(!producto){toast('Indica el producto',true);return;}
-  if(!fecha){toast('Indica la fecha',true);return;}
-  var laboreos=DB.get(uk('laboreos'),[]);
-  var obj={id:lineaId||(Date.now().toString()+Math.random().toString(36).slice(2)),parcelaId:parcelaId,campana:campanaActual,tipo:tipo,producto:producto,dosis:document.getElementById('laboreoDosis').value.trim(),fecha:fecha,maquinaria:document.getElementById('laboreoMaquinaria').value,notas:document.getElementById('laboreoNotas').value.trim()};
-  var idx=-1; for(var i=0;i<laboreos.length;i++){if(laboreos[i].id===obj.id){idx=i;break;}}
-  if(idx>=0) laboreos[idx]=obj; else laboreos.push(obj);
-  DB.set(uk('laboreos'),laboreos);
-  cerrarModal('modalLaboreo'); renderPAC(); toast(lineaId?'Laboreo actualizado':'Laboreo registrado');
-}
-
-function eliminarLaboreo(lineaId) {
-  mostrarConfirmacion('Eliminar laboreo','Se eliminara este registro de laboreo.',function(){
-    var laboreos=DB.get(uk('laboreos'),[]).filter(function(d){return d.id!==lineaId;});
-    DB.set(uk('laboreos'),laboreos); renderPAC(); toast('Laboreo eliminado');
-  });
-}
-
-// Bind Ajustes buttons on page show
-
-
-renderLoginUsers();
   showScreen('screenLogin');
 }
 
@@ -2299,8 +1987,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(m){
 });
 
 function bindModalEvents() {
-  var btnMaq=document.getElementById('btnAnadirMaquinaria');
-  if(btnMaq) btnMaq.addEventListener('click',function(){agregarMaquinaria();});
+  // Maquinaria: el botón se bindea en showPage override, no aquí
 
   // Modal cultivo
   var btnG = document.getElementById('btnGuardarCultivo');
