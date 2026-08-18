@@ -1170,27 +1170,7 @@ function hashPassword(pass) {
 }
 
 function renderLoginUsers() {
-  var recientes = _LS.get('pac_recientes', []);
-  var wrap = document.getElementById('loginRecientes');
-  var list = document.getElementById('loginRecientesList');
-  if (!wrap || !list) return;
-  if (!recientes.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
-  var html = '';
-  for (var i = 0; i < recientes.length; i++) {
-    var r = recientes[i];
-    html += '<button class="user-item" data-nombre="' + r.nombre + '">' +
-      '<div class="user-avatar av-' + (r.colorIdx % 6) + '">' + r.nombre.charAt(0).toUpperCase() + '</div>' +
-      '<div><div class="user-name">' + r.nombre + '</div><div class="user-meta">Toca para rellenar</div></div>' +
-      '<div style="margin-left:auto;color:#ccc;font-size:20px">&#8250;</div></button>';
-  }
-  list.innerHTML = html;
-  list.querySelectorAll('.user-item').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      document.getElementById('loginNombre').value = this.getAttribute('data-nombre');
-      document.getElementById('loginPass').focus();
-    });
-  });
+  // Accesos recientes desactivados
 }
 
 function mostrarRecuperarContrasena() {
