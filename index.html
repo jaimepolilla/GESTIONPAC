@@ -13,6 +13,173 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiUEFDIEdlc3Rpb24iLCJzaG9ydF9uYW1lIjoiUEFDIiwic3RhcnRfdXJsIjoiLi8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZWRmM2VhIiwidGhlbWVfY29sb3IiOiIjM2Q2YjJmIiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlIWnBaWGRDYjNnOUlqQWdNQ0F4TURBZ01UQXdJajQ4Y21WamRDQjNhV1IwYUQwaU1UQXdJaUJvWldsbmFIUTlJakV3TUNJZ2NuZzlJakl3SWlCbWFXeHNQU0lqTTJRMllqSm1JaTgrUEhSbGVIUWdlRDBpTlRBaUlIazlJamN5SWlCbWIyNTBMWE5wZW1VOUlqWXdJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWo0bUl6RXlOemd3TmpzOEwzUmxlSFErUEM5emRtYysiLCJzaXplcyI6IjUxMng1MTIiLCJ0eXBlIjoiaW1hZ2Uvc3ZnK3htbCJ9XX0=">
 <title>PAC Gestion</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// ── CONFIGURACIÓN FIREBASE ─────────────────────────────────────────
+// Rellena estos valores con los de tu proyecto Firebase
+// (Firebase Console → Project Settings → Tu app web → SDK snippet)
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCquJtXy_BM1_CwW0cZosrSoAjH4YPHnl0",
+  authDomain:        "pac-gestion.firebaseapp.com",
+  projectId:         "pac-gestion",
+  storageBucket:     "pac-gestion.firebasestorage.app",
+  messagingSenderId: "859379304072",
+  appId:             "1:859379304072:web:1dff41146435cdd4b9413d"
+};
+// ──────────────────────────────────────────────────────────────────
+
+let _app, _db, _unsubscribe = null;
+let _syncEnabled = false;
+let _remoteUpdatePending = false;
+let _lastSavedHash = '';
+
+function _hashData(obj) {
+  return JSON.stringify(obj).length + '_' + (JSON.stringify(obj).slice(0,40));
+}
+
+function setSyncStatus(status) {
+  // status: 'ok' | 'saving' | 'offline' | 'disabled'
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const map = {
+    ok:       { icon: '🟢', text: 'Sincronizado', color: '#27ae60' },
+    saving:   { icon: '🔄', text: 'Guardando…',  color: '#e67e22' },
+    offline:  { icon: '🔴', text: 'Sin conexión', color: '#c0392b' },
+    disabled: { icon: '⚪', text: 'Local',        color: '#aaa'    }
+  };
+  const s = map[status] || map.disabled;
+  el.innerHTML = s.icon + ' <span style="font-size:10px;color:rgba(255,255,255,0.75)">' + s.text + '</span>';
+}
+
+// Inicializa Firebase y arranca listener para el usuario
+window._initFirebase = function(userId) {
+  if (FIREBASE_CONFIG.apiKey === 'TU_API_KEY') {
+    console.warn('Firebase no configurado — modo local activo');
+    setSyncStatus('disabled');
+    return;
+  }
+  try {
+    if (!_app) {
+      _app = initializeApp(FIREBASE_CONFIG);
+      _db  = getFirestore(_app);
+      // Persistencia offline (funciona en iOS Safari)
+      enableIndexedDbPersistence(_db).catch(function(){});
+    }
+    _syncEnabled = true;
+
+    // Desuscribir listener anterior si cambia de usuario
+    if (_unsubscribe) { _unsubscribe(); _unsubscribe = null; }
+
+    const docRef = doc(_db, 'pac_users', userId);
+
+    // Primer arranque: migrar localStorage → Firestore si Firestore está vacío
+    getDoc(docRef).then(function(snap) {
+      if (!snap.exists()) {
+        // Firestore vacío → subir datos locales
+        const localData = _buildUserPayload();
+        if (localData) {
+          setDoc(docRef, localData).then(function() {
+            setSyncStatus('ok');
+            window._toast && window._toast('☁️ Datos migrados a la nube');
+          }).catch(function() { setSyncStatus('offline'); });
+        }
+      } else {
+        setSyncStatus('ok');
+      }
+    });
+
+    // Listener en tiempo real
+    _unsubscribe = onSnapshot(docRef, function(snap) {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (!data || !data.parcelas) return;
+
+      // Ignorar si el cambio vino de este dispositivo
+      const hash = _hashData(data);
+      if (hash === _lastSavedHash) return;
+      _lastSavedHash = hash;
+
+      // Aplicar datos remotos a las variables globales y localStorage
+      window._applyRemoteData(data);
+    }, function() {
+      setSyncStatus('offline');
+    });
+
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    setSyncStatus('disabled');
+  }
+};
+
+// Guarda todos los datos del usuario en Firestore
+window._saveToFirestore = function() {
+  if (!_syncEnabled || !_db || !window.usuarioActual) return;
+  const userId = window.usuarioActual.id;
+  const docRef = doc(_db, 'pac_users', userId);
+  const payload = _buildUserPayload();
+  if (!payload) return;
+  setSyncStatus('saving');
+  const hash = _hashData(payload);
+  setDoc(docRef, payload).then(function() {
+    _lastSavedHash = hash;
+    setSyncStatus('ok');
+  }).catch(function() {
+    setSyncStatus('offline');
+  });
+};
+
+function _buildUserPayload() {
+  if (!window.usuarioActual) return null;
+  const uid = window.usuarioActual.id;
+  const LS  = window._LS;
+  return {
+    campanaActual: LS.get('u_'+uid+'_campanaActual', ''),
+    campanas:      LS.get('u_'+uid+'_campanas',      []),
+    parcelas:      LS.get('u_'+uid+'_parcelas',      []),
+    semillas:      LS.get('u_'+uid+'_semillas',      []),
+    declaraciones: LS.get('u_'+uid+'_declaraciones', []),
+    maquinaria:    LS.get('u_'+uid+'_maquinaria',    []),
+    laboreos:      LS.get('u_'+uid+'_laboreos',      []),
+    _ts: Date.now()
+  };
+}
+
+// Aplica datos remotos: actualiza localStorage y variables globales, y rerenderiza
+window._applyRemoteData = function(data) {
+  if (!window.usuarioActual) return;
+  const uid = window.usuarioActual.id;
+  const LS  = window._LS;
+  LS.set('u_'+uid+'_campanaActual', data.campanaActual || '');
+  LS.set('u_'+uid+'_campanas',      data.campanas      || []);
+  LS.set('u_'+uid+'_parcelas',      data.parcelas      || []);
+  LS.set('u_'+uid+'_semillas',      data.semillas      || []);
+  LS.set('u_'+uid+'_declaraciones', data.declaraciones || []);
+  LS.set('u_'+uid+'_maquinaria',    data.maquinaria    || []);
+  LS.set('u_'+uid+'_laboreos',      data.laboreos      || []);
+
+  // Actualizar variables en memoria
+  window.campanaActual = data.campanaActual || '';
+  window.campanas      = data.campanas      || [];
+  window.parcelas      = data.parcelas      || [];
+  window.semillas      = data.semillas      || [];
+  window.declaraciones = data.declaraciones || [];
+
+  // Rerenderizar la vista activa
+  if (typeof window.renderCampanas === 'function') window.renderCampanas();
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    const name = activePage.id.replace('page-','');
+    if (name === 'pac')        { if(typeof window.renderPAC       === 'function') window.renderPAC(); }
+    if (name === 'parcelas')   { if(typeof window.renderParcelas  === 'function') window.renderParcelas(); }
+    if (name === 'semillas')   { if(typeof window.renderSemillas  === 'function') window.renderSemillas(); }
+    if (name === 'maquinaria') { if(typeof window.renderMaquinaria=== 'function') window.renderMaquinaria(); }
+  }
+  setSyncStatus('ok');
+};
+</script>
 <style>
 :root{--verde:#3d6b2f;--verde-claro:#5a8f47;--verde-fondo:#edf3ea;--tierra:#8b5e3c;--tierra-claro:#f5ede4;--gris:#4a4a4a;--gris-claro:#f2f2f2;--blanco:#ffffff;--rojo:#c0392b;--azul:#2471a3;--azul-claro:#d6eaf8;--naranja:#e67e22;--naranja-claro:#fef0e7;--borde:#d0dcc9;--sombra:0 2px 8px rgba(0,0,0,0.10);--radio:12px;--font:"Segoe UI",system-ui,sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -32,6 +199,7 @@ body{font-family:var(--font);background:var(--verde-fondo);color:var(--gris);min
 .user-meta{font-size:12px;color:#888;margin-top:2px;}
 .btn-link{background:none;border:none;color:var(--verde);font-size:14px;font-weight:600;cursor:pointer;padding:8px;text-decoration:underline;}
 header{background:var(--verde);color:var(--blanco);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;box-shadow:var(--sombra);}
+#syncStatus{font-size:13px;display:flex;align-items:center;gap:4px;white-space:nowrap;}
 .header-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;flex-shrink:0;border:2px solid rgba(255,255,255,0.4);cursor:pointer;}
 header h1{font-size:18px;font-weight:700;}
 header small{font-size:11px;opacity:0.8;display:block;}
@@ -236,6 +404,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <header id="appHeader" style="display:none">
   <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
   <div style="display:flex;align-items:center;gap:8px"><div style="font-size:26px;line-height:1">&#127806;</div><div style="line-height:1.1"><div style="font-size:11px;font-weight:600;opacity:0.85;letter-spacing:0.5px">Gesti&#243;n</div><div style="font-size:20px;font-weight:800;letter-spacing:-0.5px">PAC</div><small id="headerCampana" style="font-size:10px;opacity:0.75"></small></div></div>
+  <div style="margin-left:auto"><div id="syncStatus" style="font-size:12px;display:flex;align-items:center;gap:3px">⚪ <span style="font-size:10px;color:rgba(255,255,255,0.75)">Local</span></div></div>
   <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
 </header>
 
@@ -288,12 +457,24 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <button id="btnExportarTrabajos" style="width:100%;padding:14px;background:var(--verde-fondo);color:var(--verde);border:1.5px solid var(--borde);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#x1F69C; Exportar trabajos por parcela</button>
   </div>
 
-  <!-- SINCRONIZACION -->
+  <!-- SINCRONIZACION EN TIEMPO REAL -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--azul)">
-    <div style="font-size:15px;font-weight:700;color:var(--azul);margin-bottom:6px">&#128260; Compartir entre dispositivos</div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Crea un archivo de copia con todos tus datos y c&#225;rgalo en cualquier otro dispositivo.</div>
-    <button id="btnCopiaAjustes" style="width:100%;padding:14px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#128190; Crear archivo de copia (.json)</button>
-    <button id="btnRestaurarAjustes" style="width:100%;padding:14px;background:var(--azul-claro);color:var(--azul);border:1.5px solid #aed6f1;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Cargar archivo de copia</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:15px;font-weight:700;color:var(--azul)">&#9729;&#65039; Sincronización en tiempo real</span>
+      <span id="syncStatusAjustes" style="font-size:12px;background:var(--azul-claro);color:var(--azul);border-radius:20px;padding:2px 10px;font-weight:600">Activa</span>
+    </div>
+    <div style="font-size:13px;color:#666;margin-bottom:14px">Los datos se sincronizan automáticamente entre todos tus dispositivos vía Firebase. Cualquier cambio aparece en segundos en iPhone, PC, etc.</div>
+    <button onclick="if(window._saveToFirestore){window._saveToFirestore();toast('Sync manual enviado ✔');}" style="width:100%;padding:13px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#9654; Forzar sincronización ahora</button>
+    <div style="background:var(--azul-claro);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--azul);margin-bottom:10px">
+      <b>Para configurar Firebase</b> la primera vez, edita las constantes <code>FIREBASE_CONFIG</code> en el código fuente con los datos de tu proyecto (ver instrucciones abajo).
+    </div>
+  </div>
+  <!-- COPIA DE SEGURIDAD (respaldo manual) -->
+  <div class="card" style="margin-bottom:14px;border-left:4px solid #7f8c8d">
+    <div style="font-size:15px;font-weight:700;color:#555;margin-bottom:6px">&#128190; Copia de seguridad manual</div>
+    <div style="font-size:13px;color:#666;margin-bottom:14px">Descarga un archivo .json de respaldo o restaura desde uno existente.</div>
+    <button id="btnCopiaAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#128229; Descargar copia .json</button>
+    <button id="btnRestaurarAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Restaurar desde .json</button>
   </div>
   <!-- CAMPAÑAS -->
   <div class="card" style="margin-bottom:14px;border-left:4px solid var(--rojo)">
@@ -589,11 +770,26 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 </nav>
 
 <script>
-var DB = {
+// localStorage puro (sin sync) — usado internamente por Firebase module
+var _LS = {
   get: function(k, def) { try { var v=JSON.parse(localStorage.getItem(k)); return v!==null?v:def; } catch(e) { return def; } },
   set: function(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
   del: function(k) { localStorage.removeItem(k); }
 };
+window._LS = _LS;
+
+// DB con sync automático a Firestore al escribir
+var DB = {
+  get: function(k, def) { return _LS.get(k, def); },
+  set: function(k, v) {
+    _LS.set(k, v);
+    // Disparar sync con debounce (evita múltiples escrituras seguidas)
+    clearTimeout(DB._syncTimer);
+    DB._syncTimer = setTimeout(function(){ if(window._saveToFirestore) window._saveToFirestore(); }, 600);
+  },
+  del: function(k) { _LS.del(k); }
+};
+DB._syncTimer = null;
 
 var usuarios = DB.get('pac_usuarios', []);
 var usuarioActual = null;
@@ -603,6 +799,16 @@ var importPreviewSIGPAC = [];
 var importPreviewCustom = [];
 var filtroActual = 'todos';
 
+// Exponer funciones al módulo Firebase
+window._toast = function(msg,err){ toast(msg,err); };
+setTimeout(function(){
+  window.renderCampanas   = function(){ if(typeof renderCampanas   !=='undefined') renderCampanas(); };
+  window.renderPAC        = function(){ if(typeof renderPAC        !=='undefined') renderPAC(); };
+  window.renderParcelas   = function(){ if(typeof renderParcelas   !=='undefined') renderParcelas(); };
+  window.renderSemillas   = function(){ if(typeof renderSemillas   !=='undefined') renderSemillas(); };
+  window.renderMaquinaria = function(){ if(typeof renderMaquinaria !=='undefined') renderMaquinaria(); };
+},100);
+
 function uk(key) { return 'u_' + usuarioActual.id + '_' + key; }
 
 function loadUserData() {
@@ -611,6 +817,12 @@ function loadUserData() {
   parcelas      = DB.get(uk('parcelas'), []);
   semillas      = DB.get(uk('semillas'), []);
   declaraciones = DB.get(uk('declaraciones'), []);
+  // Exponer al módulo Firebase
+  window.campanaActual = campanaActual;
+  window.campanas      = campanas;
+  window.parcelas      = parcelas;
+  window.semillas      = semillas;
+  window.declaraciones = declaraciones;
 }
 
 function save() {
@@ -880,8 +1092,11 @@ function entrarApp(uid) {
   }
   if(!u) { alert('Usuario no encontrado: ' + id); return; }
   usuarioActual = u;
+  window.usuarioActual = u;
   DB.set('pac_lastUser', u.id);
   loadUserData();
+  // Iniciar sincronización Firebase
+  if (window._initFirebase) window._initFirebase(u.id);
   document.getElementById('appHeader').style.display = 'flex';
   document.getElementById('appNav').style.display = 'flex';
   hideScreens();
