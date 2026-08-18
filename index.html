@@ -161,11 +161,7 @@
       if (window._reloadUserData) window._reloadUserData(data);
       var uid = window.usuarioActual ? window.usuarioActual.id : null;
       _cacheLocally(uid, data);
-      // Rerenderizar vista activa — preservar banner de novedades
-      var bannerEl = document.getElementById('bannerNovedades');
-      var bannerHTML = bannerEl ? bannerEl.innerHTML : '';
-      var bannerVisible = bannerEl && bannerEl.style.display !== 'none';
-      if (typeof renderCampanas   === 'function') renderCampanas();
+      if (typeof renderCampanas === 'function') renderCampanas();
       var page = document.querySelector('.page.active');
       if (page) {
         var name = page.id.replace('page-','');
@@ -173,11 +169,6 @@
         if (name === 'parcelas'   && typeof renderParcelas   === 'function') renderParcelas();
         if (name === 'semillas'   && typeof renderSemillas   === 'function') renderSemillas();
         if (name === 'maquinaria' && typeof renderMaquinaria === 'function') renderMaquinaria();
-      }
-      // Restaurar banner si estaba visible
-      if (bannerVisible) {
-        var bannerEl2 = document.getElementById('bannerNovedades');
-        if (bannerEl2) { bannerEl2.innerHTML = bannerHTML; bannerEl2.style.display = ''; }
       }
       setSyncStatus('ok');
     }, function() { setSyncStatus('offline'); });
@@ -617,8 +608,6 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <button id="btnVolverCampanas" style="display:none;background:var(--gris-claro);color:var(--gris);border:none;border-radius:20px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#8592; Campa&#241;as</button>
     <div id="campanasBtns" style="display:flex;flex-wrap:wrap;gap:8px;flex:1"></div>
   </div>
-  <!-- Banner novedades -->
-  <div id="bannerNovedades" style="display:none;margin-bottom:12px"></div>
   <div id="statsCultivos" style="margin-bottom:16px"></div>
   <div class="search-bar"><span>&#128269;</span><input type="text" id="searchPAC" placeholder="Buscar parcela..." oninput="renderPAC()"></div>
   <div id="listaPAC"></div>
@@ -1017,6 +1006,11 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="nav-item" onclick="showPage('maquinaria')"><span>&#x1F69C;</span>Maquinaria</div>
   <div class="nav-item" onclick="showPage('importar')"><span>&#9881;</span>Ajustes</div>
 </nav>
+
+<!-- Banner novedades: fijo encima del contenido, fuera de cualquier página -->
+<div id="bannerNovedades" style="display:none;position:fixed;bottom:70px;left:0;right:0;z-index:500;padding:0 12px;pointer-events:none">
+  <div id="bannerNovedadesInner" style="pointer-events:auto"></div>
+</div>
 
 <script>
 // localStorage — caché local únicamente
@@ -1476,11 +1470,12 @@ function mostrarNovedades() {
           '</div>';
       });
     });
-    banner.innerHTML =
-      '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px">' +
+    var inner = document.getElementById('bannerNovedadesInner');
+    if (inner) inner.innerHTML =
+      '<div style="background:var(--verde);color:white;border-radius:var(--radio);padding:14px 16px;box-shadow:0 4px 20px rgba(0,0,0,0.25)">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:' + (detalle?'10':'0') + 'px">' +
       '<div style="font-size:14px;font-weight:700">\u{1F195} ' + resumen + '</div>' +
-      '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:24px;height:24px;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
+      '<button onclick="cerrarBannerNovedades()" style="background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:28px;height:28px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">\u2715</button>' +
       '</div>' +
       (detalle ? '<div>' + detalle + '</div>' : '') +
       '</div>';
