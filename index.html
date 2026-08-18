@@ -332,21 +332,32 @@
       .collection('workers').doc(workerId).delete();
   };
 
-  // Crear propietario nuevo en Firestore
+  // Crear propietario nuevo en Firestore (con verificación de duplicados)
   window._createUserInFirestore = function(nombre, passHash, email, colorIdx, authUid) {
     if (!_db) return Promise.resolve(null);
-    var id = Date.now().toString() + Math.random().toString(36).slice(2);
-    return _db.collection('pac_users').doc(id).set({
-      _nombre:         nombre.toLowerCase().trim(),
-      _nombre_display: nombre.trim(),
-      _passHash:       passHash,
-      _email:          email || null,
-      _authUid:        authUid || null,
-      _colorIdx:       colorIdx,
-      _ts:             Date.now(),
-      campanaActual: '', campanas: [], parcelas: [], semillas: [],
-      declaraciones: [], maquinaria: [], laboreos: []
-    }).then(function() { return id; })
+    // Verificar que no existe ya un usuario con ese nombre
+    return _db.collection('pac_users')
+      .where('_nombre', '==', nombre.toLowerCase().trim())
+      .get()
+      .then(function(snap) {
+        if (!snap.empty) {
+          // Ya existe — devolver el ID existente en lugar de crear duplicado
+          console.warn('Usuario ya existe, reutilizando:', snap.docs[0].id);
+          return snap.docs[0].id;
+        }
+        var id = Date.now().toString() + Math.random().toString(36).slice(2);
+        return _db.collection('pac_users').doc(id).set({
+          _nombre:         nombre.toLowerCase().trim(),
+          _nombre_display: nombre.trim(),
+          _passHash:       passHash,
+          _email:          email || null,
+          _authUid:        authUid || null,
+          _colorIdx:       colorIdx,
+          _ts:             Date.now(),
+          campanaActual: '', campanas: [], parcelas: [], semillas: [],
+          declaraciones: [], maquinaria: [], laboreos: []
+        }).then(function() { return id; });
+      })
       .catch(function() { return null; });
   };
 
@@ -1250,7 +1261,9 @@ function loginPorNombre() {
       }
 
       if (resultado === 'wrong_password') {
+        errEl.style.color = 'var(--rojo)';
         errEl.textContent = 'Contraseña incorrecta';
+        if (emailWrap) emailWrap.style.display = 'none';
         return;
       }
 
