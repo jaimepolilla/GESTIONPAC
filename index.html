@@ -223,9 +223,61 @@
       });
   };
 
-  // Buscar usuario por nombre + verificar contraseña
-  // Devuelve: objeto usuario | 'wrong_password' | null
+  // Buscar usuario por EMAIL + verificar contraseña (identificador único)
+  window._lookupUserByEmail = function(email, passHash) {
+    if (!_db) {
+      return new Promise(function(resolve) {
+        var attempts = 0;
+        var interval = setInterval(function() {
+          attempts++;
+          if (_db) { clearInterval(interval); resolve(_doLookupByEmail(email, passHash)); }
+          else if (attempts > 30) { clearInterval(interval); resolve(null); }
+        }, 200);
+      });
+    }
+    return _doLookupByEmail(email, passHash);
+  };
+
+  function _doLookupByEmail(email, passHash) {
+    if (!_db) return Promise.resolve(null);
+    var emailNorm = email.toLowerCase().trim();
+    // Buscar en propietarios
+    return _db.collection('pac_users').where('_email', '==', emailNorm).get()
+      .then(function(snap) {
+        if (!snap.empty) {
+          var d = snap.docs[0].data();
+          if (!d._passHash)              return 'no_password';
+          if (d._passHash !== passHash)  return 'wrong_password';
+          return { id: snap.docs[0].id, nombre: d._nombre_display || d._nombre, colorIdx: d._colorIdx || 0, rol: 'owner', _email: emailNorm };
+        }
+        // Buscar en workers
+        return _db.collection('pac_users').get().then(function(ownersSnap) {
+          var checks = ownersSnap.docs.map(function(ownerDoc) {
+            return ownerDoc.ref.collection('workers').where('_email', '==', emailNorm).get()
+              .then(function(wSnap) {
+                if (wSnap.empty) return null;
+                var wd = wSnap.docs[0].data();
+                if (!wd._passHash)             return 'no_password';
+                if (wd._passHash !== passHash) return 'wrong_password';
+                return { id: wSnap.docs[0].id, nombre: wd._nombre_display || wd._nombre, colorIdx: wd._colorIdx || 0, rol: 'worker', ownerId: ownerDoc.id, _email: emailNorm };
+              });
+          });
+          return Promise.all(checks).then(function(results) {
+            // Priorizar wrong_password sobre null
+            var wrongPwd = results.find(function(r){ return r === 'wrong_password'; });
+            if (wrongPwd) return 'wrong_password';
+            return results.find(function(r){ return r && r !== 'wrong_password'; }) || null;
+          });
+        });
+      })
+      .catch(function(e) { console.error('lookupByEmail error:', e); return null; });
+  }
+
+  // Mantener _lookupUserByName para compatibilidad con el check de duplicados
   window._lookupUserByName = function(nombre, passHash) {
+    if (!_db) return Promise.resolve(null);
+    return _doLookup(nombre, passHash);
+  };
     if (!_db) {
       return new Promise(function(resolve) {
         var attempts = 0;
@@ -530,20 +582,20 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <div class="screen active" id="screenLogin">
   <div class="screen-logo">&#127806;</div>
   <div class="screen-title">PAC Gestion</div>
-  <div class="screen-sub">Accede con tu usuario</div>
+  <div class="screen-sub">Accede con tu email</div>
   <div style="width:100%;max-width:380px">
-    <label>Nombre de usuario</label>
-    <input type="text" id="loginNombre" placeholder="Tu nombre" maxlength="30"
-      autocomplete="username" autocorrect="off" autocapitalize="words" spellcheck="false"
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="tucorreo@email.com" maxlength="100"
+      autocomplete="email"
       onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()"
-      oninput="document.getElementById('loginError').textContent='';document.getElementById('loginEmailWrap').style.display='none';">
+      oninput="document.getElementById('loginError').textContent=''">
     <label style="margin-top:12px">Contraseña</label>
     <input type="password" id="loginPass" placeholder="Contraseña" maxlength="50"
       autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')loginPorNombre()"
+      onkeydown="if(event.key==='Enter')loginPorEmail()"
       oninput="document.getElementById('loginError').textContent=''">
     <div id="loginError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
-    <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorNombre()" style="margin-top:14px">Entrar</button>
+    <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorEmail()" style="margin-top:14px">Entrar</button>
     <button class="btn-link" onclick="mostrarRecuperarContrasena()" style="display:block;margin:10px auto 0">¿Olvidaste tu contraseña?</button>
     <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:8px;min-height:20px"></div>
     <div style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;text-align:center">
@@ -567,8 +619,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <input type="text" id="regApellidos" placeholder="Tus apellidos" maxlength="60"
       autocomplete="family-name" autocorrect="off" spellcheck="false"
       oninput="document.getElementById('regError').textContent=''">
+    <label style="margin-top:12px">Email <span style="font-weight:400;color:#aaa">(identificador único)</span></label>
+    <input type="email" id="regEmail" placeholder="tucorreo@email.com" maxlength="100"
+      autocomplete="email"
+      oninput="document.getElementById('regError').textContent=''">
     <label style="margin-top:12px">Contraseña</label>
-    <input type="password" id="regPass" placeholder="M\u00ednimo 4 caracteres" maxlength="50"
+    <input type="password" id="regPass" placeholder="Mínimo 4 caracteres" maxlength="50"
       autocomplete="new-password"
       oninput="document.getElementById('regError').textContent=''">
     <label style="margin-top:12px">Repetir contraseña</label>
@@ -576,9 +632,6 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       autocomplete="new-password"
       onkeydown="if(event.key==='Enter')registrarNuevo()"
       oninput="document.getElementById('regError').textContent=''">
-    <label style="margin-top:12px">Email <span style="font-weight:400;color:#aaa">(para recuperar contraseña)</span></label>
-    <input type="email" id="regEmail" placeholder="tucorreo@email.com" maxlength="100"
-      autocomplete="email">
     <div id="regError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
     <button class="btn-primary" onclick="registrarNuevo()" style="margin-top:14px">Crear cuenta</button>
     <button class="btn-secondary" onclick="showScreen('screenLogin')">Volver al login</button>
@@ -1235,108 +1288,83 @@ function enviarRecuperacion() {
   });
 }
 
-function loginPorNombre() {
-  var nombre = (document.getElementById('loginNombre').value || '').trim();
-  var pass   = (document.getElementById('loginPass').value   || '').trim();
+function loginPorEmail() {
+  var email  = (document.getElementById('loginEmail').value || '').trim().toLowerCase();
+  var pass   = (document.getElementById('loginPass').value  || '').trim();
   var errEl  = document.getElementById('loginError');
   var status = document.getElementById('loginStatus');
   var btn    = document.getElementById('btnLoginEntrar');
 
-  if (!nombre) { errEl.textContent = 'Escribe tu nombre'; return; }
-  if (!pass)   { errEl.textContent = 'Escribe tu contraseña'; return; }
+  if (!email || !email.includes('@')) { errEl.textContent = 'Introduce un email válido'; return; }
+  if (!pass)                          { errEl.textContent = 'Escribe tu contraseña'; return; }
 
-  btn.disabled = true;
-  errEl.textContent = '';
-  status.textContent = 'Verificando…';
+  btn.disabled = true; errEl.textContent = ''; status.textContent = 'Verificando…';
 
   hashPassword(pass).then(function(passHash) {
-    if (!window._lookupUserByName) {
+    if (!window._lookupUserByEmail) {
       btn.disabled = false; status.textContent = '';
       errEl.textContent = 'Sin conexión a Firebase. Espera unos segundos.';
       return;
     }
-    window._lookupUserByName(nombre, passHash).then(function(resultado) {
+    window._lookupUserByEmail(email, passHash).then(function(resultado) {
       btn.disabled = false; status.textContent = '';
-      if (resultado === 'wrong_password') {
-        errEl.textContent = 'Contraseña incorrecta';
-        return;
-      }
-      if (resultado === 'no_password') {
-        errEl.textContent = 'Esta cuenta no tiene contraseña configurada. Usa "¿Olvidaste tu contraseña?" para establecerla.';
-        return;
-      }
-      if (!resultado) {
-        errEl.textContent = 'Usuario no encontrado. Pulsa "Crear cuenta nueva" si eres nuevo.';
-        return;
-      }
+      if (resultado === 'wrong_password') { errEl.textContent = 'Contraseña incorrecta'; return; }
+      if (resultado === 'no_password')    { errEl.textContent = 'Cuenta sin contraseña. Usa ¿Olvidaste tu contraseña?'; return; }
+      if (!resultado)                     { errEl.textContent = 'Email no encontrado. ¿Quieres crear una cuenta nueva?'; return; }
       entrarApp(resultado);
     });
   });
 }
 
+// Alias por compatibilidad
+function loginPorNombre() { loginPorEmail(); }
+
 function registrarNuevo() {
-  var nombre    = (document.getElementById('regNombre').value     || '').trim();
-  var apellidos = (document.getElementById('regApellidos').value  || '').trim();
-  var pass      = (document.getElementById('regPass').value       || '').trim();
-  var pass2     = (document.getElementById('regPass2').value      || '').trim();
-  var email     = (document.getElementById('regEmail').value      || '').trim();
+  var nombre    = (document.getElementById('regNombre').value    || '').trim();
+  var apellidos = (document.getElementById('regApellidos').value || '').trim();
+  var email     = (document.getElementById('regEmail').value     || '').trim().toLowerCase();
+  var pass      = (document.getElementById('regPass').value      || '').trim();
+  var pass2     = (document.getElementById('regPass2').value     || '').trim();
   var errEl     = document.getElementById('regError');
 
-  if (!nombre)                  { errEl.style.color='var(--rojo)'; errEl.textContent = 'El nombre es obligatorio'; return; }
-  if (!apellidos)               { errEl.style.color='var(--rojo)'; errEl.textContent = 'Los apellidos son obligatorios'; return; }
-  if (!pass || pass.length < 4) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Mínimo 4 caracteres en la contraseña'; return; }
-  if (pass !== pass2)           { errEl.style.color='var(--rojo)'; errEl.textContent = 'Las contraseñas no coinciden'; return; }
+  if (!nombre)                    { errEl.style.color='var(--rojo)'; errEl.textContent='El nombre es obligatorio'; return; }
+  if (!apellidos)                 { errEl.style.color='var(--rojo)'; errEl.textContent='Los apellidos son obligatorios'; return; }
+  if (!email || !email.includes('@')) { errEl.style.color='var(--rojo)'; errEl.textContent='Introduce un email válido'; return; }
+  if (!pass || pass.length < 4)  { errEl.style.color='var(--rojo)'; errEl.textContent='Mínimo 4 caracteres'; return; }
+  if (pass !== pass2)             { errEl.style.color='var(--rojo)'; errEl.textContent='Las contraseñas no coinciden'; return; }
 
   var nombreCompleto = nombre + ' ' + apellidos;
-  var nombreNorm     = nombreCompleto.toLowerCase().trim();
-
   errEl.style.color = '#888';
   errEl.textContent = 'Comprobando disponibilidad…';
 
   var db = window._getDB ? window._getDB() : null;
   if (!db) { errEl.style.color='var(--rojo)'; errEl.textContent='Sin conexión a Firebase'; return; }
 
-  // Comprobar duplicado en propietarios
-  db.collection('pac_users').where('_nombre', '==', nombreNorm).get().then(function(snap) {
+  // Verificar que el email no está ya registrado
+  db.collection('pac_users').where('_email', '==', email).get().then(function(snap) {
     if (!snap.empty) {
       errEl.style.color = 'var(--rojo)';
-      errEl.textContent = 'Ya existe un usuario con ese nombre y apellidos.';
+      errEl.textContent = 'Ese email ya tiene una cuenta. Inicia sesión.';
       return;
     }
-    // Comprobar en workers
-    db.collection('pac_users').get().then(function(ownersSnap) {
-      var checks = ownersSnap.docs.map(function(ownerDoc) {
-        return ownerDoc.ref.collection('workers').where('_nombre', '==', nombreNorm).get()
-          .then(function(wSnap) { return !wSnap.empty; });
-      });
-      Promise.all(checks).then(function(results) {
-        if (results.some(function(r){ return r; })) {
-          errEl.style.color = 'var(--rojo)';
-          errEl.textContent = 'Ya existe un trabajador con ese nombre y apellidos.';
-          return;
-        }
-        errEl.textContent = 'Creando cuenta…';
-        hashPassword(pass).then(function(passHash) {
-          var colorIdx = Math.floor(Math.random() * 6);
-          var authPromise = (email && window._authCreateUser)
-            ? window._authCreateUser(email, pass)
-            : Promise.resolve(null);
-          authPromise.then(function(authUid) {
-            window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
-              errEl.textContent = '';
-              if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
-              entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner' });
-            });
-          });
+    errEl.textContent = 'Creando cuenta…';
+    hashPassword(pass).then(function(passHash) {
+      var colorIdx = Math.floor(Math.random() * 6);
+      var authPromise = window._authCreateUser
+        ? window._authCreateUser(email, pass)
+        : Promise.resolve(null);
+      authPromise.then(function(authUid) {
+        window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
+          errEl.textContent = '';
+          if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
+          entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner', _email: email });
         });
       });
     });
-  }).catch(function() {
-    errEl.style.color = 'var(--rojo)';
-    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
-  });
+  }).catch(function() { errEl.style.color='var(--rojo)'; errEl.textContent='Error de conexión.'; });
 }
-function registrarUsuario() { loginPorNombre(); }
+
+function registrarUsuario() { loginPorEmail(); }
 
 
 // rol actual: 'owner' o 'worker'
