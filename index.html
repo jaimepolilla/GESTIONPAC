@@ -1353,12 +1353,14 @@ function registrarNuevo() {
 
   function _waitDB(cb) {
     var db = window._getDB ? window._getDB() : null;
+    console.log('_waitDB: db inmediato =', db, '| _getDB existe:', !!window._getDB);
     if (db) { cb(db); return; }
     var statusEl = document.getElementById('regFirebaseStatus');
     if (statusEl) statusEl.textContent = 'Conectando con Firebase…';
     var n = 0, iv = setInterval(function() {
       n++;
       var d = window._getDB ? window._getDB() : null;
+      if (n % 5 === 0) console.log('_waitDB intento', n, '| db:', d);
       if (d) {
         clearInterval(iv);
         if (statusEl) statusEl.textContent = '';
@@ -1366,6 +1368,7 @@ function registrarNuevo() {
       } else if (n > 40) {
         clearInterval(iv);
         if (statusEl) statusEl.textContent = '';
+        console.error('_waitDB: Firebase no disponible tras 8 segundos');
         cb(null);
       }
     }, 200);
