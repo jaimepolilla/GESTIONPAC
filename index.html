@@ -2825,69 +2825,40 @@ function mostrarConfirmacion(titulo, mensaje, callback) {
 function _logoMarca(marca, nombre) {
   var texto = ((marca || '') + ' ' + (nombre || '')).toLowerCase();
   var G = 'https://www.google.com/s2/favicons?sz=128&domain=';
-
-  // SVG inline para marcas principales - colores corporativos con favicon de Google como imagen
-  var svgLogos = {
-    'john deere': null,
-    'case': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#C41230"/><text x="50" y="45" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white" text-anchor="middle">CASE</text><text x="50" y="72" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="#FFDE00" text-anchor="middle">IH</text></svg>',
-    'new holland': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#003DA5"/><text x="50" y="44" font-family="Arial Black,Arial" font-weight="900" font-size="15" fill="white" text-anchor="middle">NEW</text><text x="50" y="68" font-family="Arial Black,Arial" font-weight="900" font-size="15" fill="#FFDE00" text-anchor="middle">HOLLAND</text></svg>',
-    'fendt': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#009B3A"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="white" text-anchor="middle">FENDT</text></svg>',
-    'claas': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#8DB600"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="white" text-anchor="middle">CLAAS</text></svg>',
-    'massey': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#CC0000"/><text x="50" y="40" font-family="Arial Black,Arial" font-weight="900" font-size="13" fill="white" text-anchor="middle">MASSEY</text><text x="50" y="65" font-family="Arial Black,Arial" font-weight="900" font-size="13" fill="#FFDE00" text-anchor="middle">FERGUSON</text></svg>',
-    'kubota': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#E8491D"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="16" fill="white" text-anchor="middle">KUBOTA</text></svg>',
-    'deutz': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#009A44"/><text x="50" y="40" font-family="Arial Black,Arial" font-weight="900" font-size="14" fill="white" text-anchor="middle">DEUTZ</text><text x="50" y="68" font-family="Arial Black,Arial" font-weight="900" font-size="14" fill="white" text-anchor="middle">FAHR</text></svg>',
-    'kverneland': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#E2001A"/><text x="50" y="48" font-family="Arial Black,Arial" font-weight="700" font-size="11" fill="white" text-anchor="middle">KVERNELAND</text><text x="50" y="70" font-family="Arial" font-size="10" fill="white" text-anchor="middle" opacity="0.8">GROUP</text></svg>',
-    'valtra': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#C41230"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="20" fill="white" text-anchor="middle">VALTRA</text></svg>',
-    'same': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#E30613"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="26" fill="white" text-anchor="middle">SAME</text></svg>',
-    'llorente': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#CC0000"/><text x="50" y="55" font-family="Arial Black,Arial" font-weight="900" font-size="13" fill="white" text-anchor="middle">LLORENTE</text></svg>',
-    'ebro': '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="100" height="100" rx="12" fill="#003DA5"/><text x="50" y="58" font-family="Arial Black,Arial" font-weight="900" font-size="22" fill="white" text-anchor="middle">EBRO</text></svg>',
-  };
-  // Buscar SVG inline primero
-  var svgKeys = [
-    ['john deere','deere'], ['case ih','case'], ['new holland'], ['fendt'], ['claas'],
-    ['massey ferguson','massey'], ['kubota'], ['deutz-fahr','deutz'], ['kverneland'],
-    ['valtra'], ['same'], ['llorente'], ['ebro']
-  ];
-  var svgMap = {
-    'john deere': 'john deere', 'deere': 'john deere',
-    'case ih': 'case', 'case': 'case',
-    'new holland': 'new holland', 'fendt': 'fendt', 'claas': 'claas',
-    'massey ferguson': 'massey', 'massey': 'massey',
-    'kubota': 'kubota', 'deutz-fahr': 'deutz', 'deutz': 'deutz',
-    'kverneland': 'kverneland', 'valtra': 'valtra', 'same': 'same',
-    'llorente': 'llorente', 'ebro': 'ebro'
-  };
-  var allKeys = Object.keys(svgMap).sort(function(a,b){ return b.length - a.length; });
-  for (var k = 0; k < allKeys.length; k++) {
-    if (texto.indexOf(allKeys[k]) !== -1) {
-      var svgKey = svgMap[allKeys[k]];
-      var svgVal = svgLogos[svgKey];
-      if (svgVal) return { svg: svgVal };
-      // null = usar favicon externo
-      break;
-    }
-  }
-
-  // Favicon de Google para el resto
   var marcas = [
-    { keys: ['john deere','deere'],       url: G + 'deere.com' },
-    { keys: ['amazone'],      url: G + 'amazone.de' },
-    { keys: ['horsch'],       url: G + 'horsch.com' },
-    { keys: ['lemken'],       url: G + 'lemken.com' },
-    { keys: ['kuhn'],         url: G + 'kuhn.com' },
-    { keys: ['krone'],        url: G + 'krone.de' },
-    { keys: ['poettinger','pöttinger'], url: G + 'poettinger.at' },
-    { keys: ['grimme'],       url: G + 'grimme.de' },
-    { keys: ['joskin'],       url: G + 'joskin.com' },
-    { keys: ['fliegl'],       url: G + 'fliegl.com' },
-    { keys: ['manitou'],      url: G + 'manitou.com' },
-    { keys: ['merlo'],        url: G + 'merlo.it' },
-    { keys: ['jcb'],          url: G + 'jcb.com' },
-    { keys: ['caterpillar','cat '], url: G + 'caterpillar.com' },
-    { keys: ['steyr'],        url: G + 'steyr-traktoren.com' },
-    { keys: ['zetor'],        url: G + 'zetor.com' },
-    { keys: ['agco'],         url: G + 'agcocorp.com' },
-    { keys: ['landini'],      url: G + 'landini.it' },
+    { keys: ['john deere','deere'],           url: G + 'deere.com' },
+    { keys: ['case ih','case'],               url: G + 'caseih.com' },
+    { keys: ['new holland'],                  url: G + 'newholland.com' },
+    { keys: ['fendt'],                        url: G + 'fendt.com' },
+    { keys: ['claas'],                        url: G + 'claas.com' },
+    { keys: ['massey ferguson','massey'],     url: G + 'masseyferguson.com' },
+    { keys: ['kubota'],                       url: G + 'kubota.com' },
+    { keys: ['deutz-fahr','deutz'],           url: G + 'deutz-fahr.com' },
+    { keys: ['valtra'],                       url: G + 'valtra.com' },
+    { keys: ['kverneland'],                   url: G + 'kverneland.com' },
+    { keys: ['same'],                         url: G + 'samegroup.com' },
+    { keys: ['landini'],                      url: G + 'landini.it' },
+    { keys: ['ebro'],                         url: G + 'ebro.com' },
+    { keys: ['amazone'],                      url: G + 'amazone.de' },
+    { keys: ['horsch'],                       url: G + 'horsch.com' },
+    { keys: ['lemken'],                       url: G + 'lemken.com' },
+    { keys: ['kuhn'],                         url: G + 'kuhn.com' },
+    { keys: ['krone'],                        url: G + 'krone.de' },
+    { keys: ['poettinger','p\u00f6ttinger'], url: G + 'poettinger.at' },
+    { keys: ['grimme'],                       url: G + 'grimme.de' },
+    { keys: ['joskin'],                       url: G + 'joskin.com' },
+    { keys: ['fliegl'],                       url: G + 'fliegl.com' },
+    { keys: ['manitou'],                      url: G + 'manitou.com' },
+    { keys: ['merlo'],                        url: G + 'merlo.it' },
+    { keys: ['jcb'],                          url: G + 'jcb.com' },
+    { keys: ['caterpillar','cat '],           url: G + 'caterpillar.com' },
+    { keys: ['steyr'],                        url: G + 'steyr-traktoren.com' },
+    { keys: ['zetor'],                        url: G + 'zetor.com' },
+    { keys: ['llorente'],                     url: G + 'llorente.es' },
+    { keys: ['agco'],                         url: G + 'agcocorp.com' },
+    { keys: ['challenger'],                   url: G + 'challenger-ag.com' },
+    { keys: ['weidemann'],                    url: G + 'weidemann.de' },
+    { keys: ['lamborghini'],                  url: G + 'lamborghini-tractors.com' },
   ];
   for (var i = 0; i < marcas.length; i++) {
     for (var j = 0; j < marcas[i].keys.length; j++) {
@@ -2896,7 +2867,6 @@ function _logoMarca(marca, nombre) {
   }
   return null;
 }
-
 function _tipoSVG(tipo) {
   var svgs = {
     'Tractor':     '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#e8f5e9"/><ellipse cx="20" cy="46" rx="11" ry="11" fill="#388e3c" stroke="#1b5e20" stroke-width="2"/><ellipse cx="20" cy="46" rx="5" ry="5" fill="#c8e6c9"/><ellipse cx="47" cy="49" rx="7" ry="7" fill="#388e3c" stroke="#1b5e20" stroke-width="2"/><ellipse cx="47" cy="49" rx="3" ry="3" fill="#c8e6c9"/><rect x="24" y="30" width="22" height="14" rx="3" fill="#4caf50"/><rect x="28" y="22" width="10" height="10" rx="2" fill="#81c784" stroke="#388e3c" stroke-width="1.5"/><rect x="14" y="36" width="12" height="8" rx="2" fill="#66bb6a"/></svg>',
@@ -2915,14 +2885,9 @@ function _tipoSVG(tipo) {
 function _maqIconHTML(m) {
   var logo = _logoMarca(m.marca, m.nombre);
   if (logo) {
-    if (logo.svg) {
-      // SVG inline — siempre visible
-      return '<div class="maq-icon" style="background:transparent;padding:2px;overflow:hidden">' + logo.svg + '</div>';
-    }
-    // URL externa con fallback
     return '<div class="maq-icon" style="background:white;padding:4px;overflow:hidden">' +
       '<img src="' + logo + '" style="width:100%;height:100%;object-fit:contain;border-radius:6px" ' +
-      'onerror="this.parentNode.outerHTML=\'<div class=maq-icon style=padding:4px;background:#f5f5f5;overflow:hidden>\'+_tipoSVG(\'' + (m.tipo||'Otro').replace(/'/g,"\\'") + '\')+\'</div>\'">' +
+      'onerror="this.parentNode.style.background=\'#f5f5f5\';this.parentNode.innerHTML=_tipoSVG(\'' + (m.tipo||'Otro').replace(/'/g,"\\'") + '\')">' +
       '</div>';
   }
   return '<div class="maq-icon" style="padding:4px;background:#f5f5f5;overflow:hidden">' + _tipoSVG(m.tipo||'Otro') + '</div>';
