@@ -254,7 +254,7 @@
   function _doLookupByEmail(email, passHash) {
     if (!_db) return Promise.resolve(null);
     var emailNorm = email.toLowerCase().trim();
-    // Buscar en propietarios
+    // Buscar en propietarios por email
     return _db.collection('pac_users').where('_email', '==', emailNorm).get()
       .then(function(snap) {
         if (!snap.empty) {
@@ -263,7 +263,7 @@
           if (d._passHash !== passHash)  return 'wrong_password';
           return { id: snap.docs[0].id, nombre: d._nombre_display || d._nombre, colorIdx: d._colorIdx || 0, rol: 'owner', _email: emailNorm };
         }
-        // Buscar en workers
+        // No encontrado por email → buscar en workers por email
         return _db.collection('pac_users').get().then(function(ownersSnap) {
           var checks = ownersSnap.docs.map(function(ownerDoc) {
             return ownerDoc.ref.collection('workers').where('_email', '==', emailNorm).get()
@@ -276,10 +276,24 @@
               });
           });
           return Promise.all(checks).then(function(results) {
-            // Priorizar wrong_password sobre null
+            var found = results.find(function(r){ return r && r !== 'wrong_password' && r !== 'no_password'; });
+            if (found) return found;
             var wrongPwd = results.find(function(r){ return r === 'wrong_password'; });
             if (wrongPwd) return 'wrong_password';
-            return results.find(function(r){ return r && r !== 'wrong_password'; }) || null;
+
+            // Último fallback: buscar por _passHash directamente (usuarios sin _email)
+            return _db.collection('pac_users').get().then(function(allSnap) {
+              var match = null;
+              allSnap.docs.forEach(function(doc) {
+                var d = doc.data();
+                if (!d._email && d._passHash === passHash) {
+                  match = { id: doc.id, nombre: d._nombre_display || d._nombre, colorIdx: d._colorIdx || 0, rol: 'owner', _email: emailNorm };
+                  // Actualizar documento con el email automáticamente
+                  doc.ref.update({ _email: emailNorm });
+                }
+              });
+              return match;
+            });
           });
         });
       })
