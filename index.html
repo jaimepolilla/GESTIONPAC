@@ -2785,32 +2785,41 @@ function mostrarConfirmacion(titulo, mensaje, callback) {
 
 function _logoMarca(marca, nombre) {
   var texto = ((marca || '') + ' ' + (nombre || '')).toLowerCase();
-  // Google S2 favicon service - siempre funciona cross-origin
   var G = 'https://www.google.com/s2/favicons?sz=64&domain=';
   var marcas = [
-    { keys: ['john deere','deere'],         url: G + 'deere.com' },
-    { keys: ['case ih','case'],             url: G + 'caseih.com' },
-    { keys: ['new holland'],                url: G + 'newholland.com' },
-    { keys: ['fendt'],                      url: G + 'fendt.com' },
-    { keys: ['claas'],                      url: G + 'claas.com' },
-    { keys: ['massey ferguson','massey'],   url: G + 'masseyferguson.com' },
-    { keys: ['kubota'],                     url: G + 'kubota.com' },
-    { keys: ['deutz-fahr','deutz'],         url: G + 'deutz-fahr.com' },
-    { keys: ['landini'],                    url: G + 'landini.it' },
-    { keys: ['same'],                       url: G + 'samegroup.com' },
-    { keys: ['valtra'],                     url: G + 'valtra.com' },
-    { keys: ['steyr'],                      url: G + 'steyr-traktoren.com' },
-    { keys: ['zetor'],                      url: G + 'zetor.com' },
-    { keys: ['amazone'],                    url: G + 'amazone.de' },
-    { keys: ['horsch'],                     url: G + 'horsch.com' },
-    { keys: ['lemken'],                     url: G + 'lemken.com' },
-    { keys: ['kuhn'],                       url: G + 'kuhn.com' },
-    { keys: ['krone'],                      url: G + 'krone.de' },
-    { keys: ['poettinger'],                 url: G + 'poettinger.at' },
-    { keys: ['agco'],                       url: G + 'agcocorp.com' },
-    { keys: ['caterpillar','cat '],         url: G + 'caterpillar.com' },
-    { keys: ['challenger'],                 url: G + 'challenger-ag.com' },
-    { keys: ['lamborghini'],                url: G + 'lamborghini.com' },
+    { keys: ['john deere','deere'],              url: G + 'deere.com' },
+    { keys: ['case ih','case'],                  url: G + 'caseih.com' },
+    { keys: ['new holland'],                     url: G + 'newholland.com' },
+    { keys: ['fendt'],                           url: G + 'fendt.com' },
+    { keys: ['claas'],                           url: G + 'claas.com' },
+    { keys: ['massey ferguson','massey'],        url: G + 'masseyferguson.com' },
+    { keys: ['kubota'],                          url: G + 'kubota.com' },
+    { keys: ['deutz-fahr','deutz'],              url: G + 'deutz-fahr.com' },
+    { keys: ['landini'],                         url: G + 'landini.it' },
+    { keys: ['same'],                            url: G + 'samegroup.com' },
+    { keys: ['valtra'],                          url: G + 'valtra.com' },
+    { keys: ['steyr'],                           url: G + 'steyr-traktoren.com' },
+    { keys: ['zetor'],                           url: G + 'zetor.com' },
+    { keys: ['kverneland'],                      url: G + 'kverneland.com' },
+    { keys: ['amazone'],                         url: G + 'amazone.de' },
+    { keys: ['horsch'],                          url: G + 'horsch.com' },
+    { keys: ['lemken'],                          url: G + 'lemken.com' },
+    { keys: ['kuhn'],                            url: G + 'kuhn.com' },
+    { keys: ['krone'],                           url: G + 'krone.de' },
+    { keys: ['poettinger','pöttinger'],          url: G + 'poettinger.at' },
+    { keys: ['agco'],                            url: G + 'agcocorp.com' },
+    { keys: ['caterpillar','cat '],              url: G + 'caterpillar.com' },
+    { keys: ['challenger'],                      url: G + 'challenger-ag.com' },
+    { keys: ['lamborghini'],                     url: G + 'lamborghini.com' },
+    { keys: ['llorente'],                        url: G + 'llorente.es' },
+    { keys: ['grimme'],                          url: G + 'grimme.de' },
+    { keys: ['keenan'],                          url: G + 'keenan.ie' },
+    { keys: ['joskin'],                          url: G + 'joskin.com' },
+    { keys: ['fliegl'],                          url: G + 'fliegl.com' },
+    { keys: ['manitou'],                         url: G + 'manitou.com' },
+    { keys: ['merlo'],                           url: G + 'merlo.it' },
+    { keys: ['weidemann'],                       url: G + 'weidemann.de' },
+    { keys: ['jcb'],                             url: G + 'jcb.com' },
   ];
   for (var i = 0; i < marcas.length; i++) {
     for (var j = 0; j < marcas[i].keys.length; j++) {
@@ -2820,18 +2829,30 @@ function _logoMarca(marca, nombre) {
   return null;
 }
 
+function _tipoSVG(tipo) {
+  // SVG inline por tipo de maquinaria
+  var svgs = {
+    'Tractor': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#e8f5e9"/><ellipse cx="20" cy="46" rx="11" ry="11" fill="#388e3c" stroke="#1b5e20" stroke-width="2"/><ellipse cx="20" cy="46" rx="5" ry="5" fill="#c8e6c9"/><ellipse cx="47" cy="49" rx="7" ry="7" fill="#388e3c" stroke="#1b5e20" stroke-width="2"/><ellipse cx="47" cy="49" rx="3" ry="3" fill="#c8e6c9"/><rect x="24" y="30" width="22" height="14" rx="3" fill="#4caf50"/><rect x="28" y="22" width="10" height="10" rx="2" fill="#81c784" stroke="#388e3c" stroke-width="1.5"/><rect x="14" y="36" width="12" height="8" rx="2" fill="#66bb6a"/><line x1="38" y1="30" x2="38" y2="44" stroke="#1b5e20" stroke-width="1.5"/></svg>',
+    'Cosechadora': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#fff8e1"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#f9a825" stroke="#f57f17" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#fff9c4"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#f9a825" stroke="#f57f17" stroke-width="2"/><rect x="20" y="28" width="26" height="18" rx="3" fill="#fdd835"/><rect x="24" y="20" width="14" height="10" rx="2" fill="#fff176" stroke="#f9a825" stroke-width="1.5"/><rect x="8" y="34" width="14" height="6" rx="2" fill="#f9a825"/><line x1="8" y1="30" x2="8" y2="40" stroke="#f57f17" stroke-width="2"/><line x1="12" y1="28" x2="12" y2="40" stroke="#f57f17" stroke-width="2"/><line x1="16" y1="30" x2="16" y2="40" stroke="#f57f17" stroke-width="2"/></svg>',
+    'Pulverizador': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#e3f2fd"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#1565c0" stroke="#0d47a1" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#bbdefb"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#1565c0" stroke="#0d47a1" stroke-width="2"/><rect x="20" y="30" width="24" height="16" rx="3" fill="#1e88e5"/><rect x="22" y="22" width="10" height="10" rx="5" fill="#42a5f5" stroke="#1565c0" stroke-width="1.5"/><line x1="4" y1="32" x2="60" y2="32" stroke="#1e88e5" stroke-width="2"/><circle cx="10" cy="32" r="2" fill="#90caf9"/><circle cx="30" cy="32" r="2" fill="#90caf9"/><circle cx="50" cy="32" r="2" fill="#90caf9"/><line x1="10" y1="32" x2="10" y2="38" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="30" y1="32" x2="30" y2="38" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="2,2"/><line x1="50" y1="32" x2="50" y2="38" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="2,2"/></svg>',
+    'Sembradora': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#f1f8e9"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#558b2f" stroke="#33691e" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#dcedc8"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#558b2f" stroke="#33691e" stroke-width="2"/><rect x="20" y="28" width="24" height="16" rx="3" fill="#7cb342"/><rect x="26" y="20" width="12" height="10" rx="2" fill="#aed581" stroke="#558b2f" stroke-width="1.5"/><line x1="24" y1="44" x2="20" y2="56" stroke="#33691e" stroke-width="1.5"/><line x1="32" y1="44" x2="32" y2="56" stroke="#33691e" stroke-width="1.5"/><line x1="40" y1="44" x2="44" y2="56" stroke="#33691e" stroke-width="1.5"/><circle cx="20" cy="57" r="2" fill="#a5d6a7"/><circle cx="32" cy="57" r="2" fill="#a5d6a7"/><circle cx="44" cy="57" r="2" fill="#a5d6a7"/></svg>',
+    'Remolque': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#fafafa"/><ellipse cx="16" cy="48" rx="9" ry="9" fill="#546e7a" stroke="#263238" stroke-width="2"/><ellipse cx="16" cy="48" rx="4" ry="4" fill="#cfd8dc"/><ellipse cx="48" cy="48" rx="9" ry="9" fill="#546e7a" stroke="#263238" stroke-width="2"/><ellipse cx="48" cy="48" rx="4" ry="4" fill="#cfd8dc"/><rect x="8" y="24" width="48" height="20" rx="3" fill="#78909c"/><rect x="10" y="26" width="44" height="16" rx="2" fill="#90a4ae"/><line x1="8" y1="34" x2="4" y2="34" stroke="#546e7a" stroke-width="2.5"/></svg>',
+    'Abonadora': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#fff3e0"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#e65100" stroke="#bf360c" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#ffccbc"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#e65100" stroke="#bf360c" stroke-width="2"/><rect x="20" y="28" width="24" height="16" rx="3" fill="#fb8c00"/><rect x="24" y="20" width="16" height="10" rx="8" fill="#ffa726" stroke="#e65100" stroke-width="1.5"/><line x1="30" y1="44" x2="26" y2="54" stroke="#bf360c" stroke-width="1.5"/><line x1="36" y1="44" x2="38" y2="54" stroke="#bf360c" stroke-width="1.5"/><circle cx="26" cy="55" r="2" fill="#ffe0b2"/><circle cx="38" cy="55" r="2" fill="#ffe0b2"/></svg>',
+    'Cultivador': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#efebe9"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#4e342e" stroke="#3e2723" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#d7ccc8"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#4e342e" stroke="#3e2723" stroke-width="2"/><rect x="20" y="30" width="24" height="12" rx="2" fill="#6d4c41"/><line x1="22" y1="42" x2="18" y2="58" stroke="#3e2723" stroke-width="2"/><line x1="28" y1="42" x2="28" y2="58" stroke="#3e2723" stroke-width="2"/><line x1="34" y1="42" x2="34" y2="58" stroke="#3e2723" stroke-width="2"/><line x1="40" y1="42" x2="44" y2="58" stroke="#3e2723" stroke-width="2"/></svg>',
+    'Otro': '<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><rect width="64" height="64" rx="10" fill="#f5f5f5"/><ellipse cx="18" cy="47" rx="10" ry="10" fill="#757575" stroke="#424242" stroke-width="2"/><ellipse cx="18" cy="47" rx="4" ry="4" fill="#e0e0e0"/><ellipse cx="46" cy="50" rx="7" ry="7" fill="#757575" stroke="#424242" stroke-width="2"/><rect x="20" y="28" width="24" height="16" rx="3" fill="#9e9e9e"/><rect x="26" y="20" width="12" height="10" rx="2" fill="#bdbdbd" stroke="#757575" stroke-width="1.5"/></svg>'
+  };
+  return svgs[tipo] || svgs['Otro'];
+}
+
 function _maqIconHTML(m) {
   var logo = _logoMarca(m.marca, m.nombre);
   if (logo) {
     return '<div class="maq-icon" style="background:white;padding:4px;overflow:hidden">' +
       '<img src="' + logo + '" style="width:100%;height:100%;object-fit:contain;border-radius:6px" ' +
-      'onerror="this.parentNode.innerHTML=\'&#x1F69C;\'">' +
+      'onerror="this.parentNode.innerHTML=_tipoSVG(\'' + (m.tipo||'Otro') + '\')">' +
       '</div>';
   }
-  var iconos = {'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;',
-    'Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;',
-    'Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
-  return '<div class="maq-icon">' + (iconos[m.tipo] || '&#x1F527;') + '</div>';
+  return '<div class="maq-icon" style="padding:4px;background:#f5f5f5;overflow:hidden">' + _tipoSVG(m.tipo||'Otro') + '</div>';
 }
 
 function renderMaquinaria() {
