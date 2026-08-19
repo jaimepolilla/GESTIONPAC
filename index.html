@@ -2699,18 +2699,69 @@ function mostrarConfirmacion(titulo, mensaje, callback) {
   document.getElementById('modalConfirmar').classList.add('open');
 }
 
+function _logoMarca(marca, nombre) {
+  // Detectar marca del campo marca o del nombre
+  var texto = ((marca || '') + ' ' + (nombre || '')).toLowerCase();
+  var marcas = {
+    'john deere':   'https://logo.clearbit.com/deere.com',
+    'deere':        'https://logo.clearbit.com/deere.com',
+    'case':         'https://logo.clearbit.com/caseih.com',
+    'new holland':  'https://logo.clearbit.com/newholland.com',
+    'fendt':        'https://logo.clearbit.com/fendt.com',
+    'claas':        'https://logo.clearbit.com/claas.com',
+    'massey':       'https://logo.clearbit.com/masseyferguson.com',
+    'massey ferguson': 'https://logo.clearbit.com/masseyferguson.com',
+    'kubota':       'https://logo.clearbit.com/kubota.com',
+    'deutz':        'https://logo.clearbit.com/deutz.com',
+    'landini':      'https://logo.clearbit.com/landini.it',
+    'same':         'https://logo.clearbit.com/samegroup.com',
+    'valtra':       'https://logo.clearbit.com/valtra.com',
+    'steyr':        'https://logo.clearbit.com/steyr-traktoren.com',
+    'zetor':        'https://logo.clearbit.com/zetor.com',
+    'lamborghini':  'https://logo.clearbit.com/lamborghini.com',
+    'llorente':     null,
+    'amazone':      'https://logo.clearbit.com/amazone.de',
+    'horsch':       'https://logo.clearbit.com/horsch.com',
+    'lemken':       'https://logo.clearbit.com/lemken.com',
+    'kuhn':         'https://logo.clearbit.com/kuhn.com',
+    'krone':        'https://logo.clearbit.com/krone.de',
+    'poettinger':   'https://logo.clearbit.com/poettinger.at',
+    'agco':         'https://logo.clearbit.com/agcocorp.com',
+    'challenger':   'https://logo.clearbit.com/challenger-ag.com',
+    'caterpillar':  'https://logo.clearbit.com/caterpillar.com',
+    'cat ':         'https://logo.clearbit.com/caterpillar.com',
+  };
+  for (var key in marcas) {
+    if (texto.indexOf(key) !== -1 && marcas[key]) return marcas[key];
+  }
+  return null;
+}
+
+function _maqIconHTML(m) {
+  var logo = _logoMarca(m.marca, m.nombre);
+  if (logo) {
+    return '<div class="maq-icon" style="background:white;padding:4px;overflow:hidden">' +
+      '<img src="' + logo + '" style="width:100%;height:100%;object-fit:contain;border-radius:6px" ' +
+      'onerror="this.parentNode.innerHTML=\'&#x1F69C;\'">' +
+      '</div>';
+  }
+  var iconos = {'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;',
+    'Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;',
+    'Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
+  return '<div class="maq-icon">' + (iconos[m.tipo] || '&#x1F527;') + '</div>';
+}
+
 function renderMaquinaria() {
   var maquinaria = DB.get(uk('maquinaria'),[]);
   var cont = document.getElementById('listaMaquinaria');
   if(!maquinaria.length){ cont.innerHTML='<div class="empty"><div class="empty-icon">&#x1F69C;</div><div class="empty-text">Sin maquinaria anadida</div></div>'; return; }
-  var iconos={'Tractor':'&#x1F69C;','Pulverizador':'&#x1F4A7;','Cosechadora':'&#x1F33E;','Sembradora':'&#x1F331;','Remolque':'&#x1F69B;','Abonadora':'&#x1F4E6;','Cultivador':'&#x26CF;','Otro':'&#x1F527;'};
   var html='<div class="card">';
   for(var i=0;i<maquinaria.length;i++){
     var m=maquinaria[i];
     html+='<div class="maq-item">' +
-      '<div class="maq-icon">'+(iconos[m.tipo]||'&#x1F527;')+'</div>' +
+      _maqIconHTML(m) +
       '<div style="flex:1;min-width:0"><div class="maq-name">'+m.nombre+'</div>' +
-      '<div class="maq-sub">'+(m.tipo||'')+' — '+(m.marca||'')+' '+(m.modelo||'')+'</div></div>' +
+      '<div class="maq-sub">'+(m.tipo||'')+' \u2014 '+(m.marca||'')+' '+(m.modelo||'')+'</div></div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
       '<button class="maq-btn-edit" data-id="'+m.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">\u270F\uFE0F</button>' +
       '<button class="maq-btn-del" data-id="'+m.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;">\u2715</button>' +
