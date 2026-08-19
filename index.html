@@ -562,7 +562,13 @@ input[readonly]{background:var(--gris-claro);color:#888;cursor:default;}
 .preview-table th{background:var(--verde);color:white;padding:8px 10px;text-align:left;white-space:nowrap;}
 .preview-table td{padding:7px 10px;border-bottom:1px solid var(--borde);white-space:nowrap;}
 .preview-table tr:nth-child(even) td{background:var(--verde-fondo);}
-.import-mode-tabs{display:flex;gap:8px;margin-bottom:14px;}
+.ajuste-item{background:white;border-radius:var(--radio);margin-bottom:2px;cursor:pointer;box-shadow:var(--sombra);overflow:hidden;}
+.ajuste-item-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:15px;font-weight:700;color:var(--gris);}
+.ajuste-item:active{background:var(--gris-claro);}
+.ajuste-arrow{font-size:20px;color:#bbb;transition:transform 0.2s;display:inline-block;}
+.ajuste-arrow.open{transform:rotate(90deg);}
+.ajuste-body{display:none;padding:0 12px 14px;background:white;border-radius:0 0 var(--radio) var(--radio);margin-bottom:8px;box-shadow:var(--sombra);}
+.ajuste-body.open{display:block;}
 .import-mode-tab{flex:1;padding:10px 8px;text-align:center;border:2px solid var(--borde);border-radius:10px;font-size:13px;font-weight:600;color:#888;cursor:pointer;}
 .import-mode-tab.active{border-color:var(--verde);color:var(--verde);background:var(--verde-fondo);}
 .search-bar{display:flex;align-items:center;background:var(--blanco);border:1.5px solid var(--borde);border-radius:10px;padding:10px 14px;gap:8px;margin-bottom:14px;}
@@ -757,115 +763,135 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <div id="page-importar" class="page">
   <div style="font-size:22px;font-weight:800;color:var(--verde);margin-bottom:16px">&#9881; Ajustes</div>
 
-  <!-- ── SECCIÓN: MI CUENTA ── -->
-  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:4px">MI CUENTA</div>
-
-  <!-- Exportar (solo propietario) -->
-  <div class="card" style="margin-bottom:10px">
-    <div style="font-size:14px;font-weight:700;color:var(--verde);margin-bottom:10px">&#128229; Exportar datos</div>
+  <!-- EXPORTAR -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-exportar')">
+    <div class="ajuste-item-header">
+      <span>&#128229; Exportar datos</span><span class="ajuste-arrow" id="arrow-ajuste-exportar">&#8250;</span>
+    </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-exportar">
     <button id="btnExportarAjustes" style="width:100%;padding:12px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:8px;">&#128229; Exportar declaración de cultivos</button>
     <button id="btnExportarTrabajos" style="width:100%;padding:12px;background:var(--verde-fondo);color:var(--verde);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#x1F69C; Exportar trabajos por parcela</button>
   </div>
 
-  <!-- Copia de seguridad (solo propietario) -->
-  <div class="card" style="margin-bottom:10px">
-    <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:10px">&#128190; Copia de seguridad</div>
+  <!-- COPIA DE SEGURIDAD -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-copia')">
+    <div class="ajuste-item-header">
+      <span>&#128190; Copia de seguridad</span><span class="ajuste-arrow" id="arrow-ajuste-copia">&#8250;</span>
+    </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-copia">
     <button id="btnCopiaAjustes" style="width:100%;padding:12px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:8px;">&#128229; Descargar copia .json</button>
     <button id="btnRestaurarAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Restaurar desde .json</button>
   </div>
 
-  <!-- ── SECCIÓN: CAMPAÑAS (solo propietario) ── -->
-  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px">CAMPAÑAS</div>
-  <div class="card" style="margin-bottom:10px">
-    <div style="font-size:14px;font-weight:700;color:var(--rojo);margin-bottom:10px">&#128465; Gestionar campañas</div>
-    <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina campañas que ya no necesites. Se borrarán todos sus cultivos y laboreos asociados.</div>
+  <!-- CAMPAÑAS -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-campanas',true)">
+    <div class="ajuste-item-header">
+      <span>&#128465; Gestionar campa&#241;as</span><span class="ajuste-arrow" id="arrow-ajuste-campanas">&#8250;</span>
+    </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-campanas">
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina campa&#241;as que ya no necesites. Se borrar&#225;n todos sus cultivos y laboreos asociados.</div>
     <div id="listaCampanasAjustes"></div>
   </div>
 
-  <!-- ── SECCIÓN: EQUIPO (solo propietario) ── -->
-  <div class="card" id="cardTrabajadores" style="margin-bottom:10px">
-    <div style="font-size:14px;font-weight:700;color:#8e44ad;margin-bottom:10px">&#128100; Trabajadores</div>
+  <!-- TRABAJADORES -->
+  <div class="ajuste-item" id="cardTrabajadores" onclick="toggleAjuste('ajuste-trabajadores',true)">
+    <div class="ajuste-item-header">
+      <span>&#128100; Trabajadores</span><span class="ajuste-arrow" id="arrow-ajuste-trabajadores">&#8250;</span>
+    </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-trabajadores">
     <div style="font-size:13px;color:#666;margin-bottom:12px">Los trabajadores pueden registrar laboreos pero no pueden modificar datos ni ajustes.</div>
     <div id="listaTrabajadores" style="margin-bottom:12px"></div>
     <div style="border-top:1px solid var(--borde);padding-top:14px">
-      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">Añadir trabajador</div>
+      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">A&#241;adir trabajador</div>
       <input type="text" id="workerNombre" placeholder="Nombre del trabajador" maxlength="30" style="margin-bottom:8px">
       <input type="text" id="workerApellidos" placeholder="Apellidos del trabajador" maxlength="60" style="margin-bottom:8px">
-      <input type="password" id="workerPass" placeholder="Contraseña" maxlength="50" style="margin-bottom:8px">
+      <input type="password" id="workerPass" placeholder="Contrase&#241;a" maxlength="50" style="margin-bottom:8px">
       <input type="email" id="workerEmail" placeholder="Email del trabajador" maxlength="100" style="margin-bottom:8px">
       <button onclick="crearTrabajador()" style="width:100%;padding:12px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear trabajador</button>
       <div id="workerError" style="color:var(--rojo);font-size:13px;margin-top:6px;min-height:16px"></div>
     </div>
   </div>
 
-  <!-- ── SECCIÓN: SINCRONIZACIÓN (solo propietario) ── -->
-  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px">SISTEMA</div>
-  <div class="card" style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <span style="font-size:14px;font-weight:700;color:var(--azul)">&#9729;&#65039; Sincronización</span>
-      <span id="syncStatusAjustes" style="font-size:12px;background:var(--azul-claro);color:var(--azul);border-radius:20px;padding:2px 10px;font-weight:600">Activa</span>
+  <!-- SINCRONIZACIÓN -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-sync')">
+    <div class="ajuste-item-header">
+      <span>&#9729;&#65039; Sincronizaci&#243;n</span>
+      <span style="display:flex;align-items:center;gap:6px"><span id="syncStatusAjustes" style="font-size:11px;background:var(--azul-claro);color:var(--azul);border-radius:20px;padding:2px 8px;font-weight:600">Activa</span><span class="ajuste-arrow" id="arrow-ajuste-sync">&#8250;</span></span>
     </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-sync">
     <div style="font-size:13px;color:#666;margin-bottom:10px">Datos sincronizados en tiempo real entre todos tus dispositivos.</div>
-    <button onclick="if(window._saveToFirestore){window._saveToFirestore();toast('Sync enviado \u2714');}" style="width:100%;padding:12px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#9654; Forzar sincronización</button>
+    <button onclick="if(window._saveToFirestore){window._saveToFirestore();toast('Sync enviado \u2714');}" style="width:100%;padding:12px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#9654; Forzar sincronizaci&#243;n</button>
   </div>
 
-  <!-- ── SECCIÓN: IMPORTAR PARCELAS ── -->
-  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px">IMPORTAR PARCELAS</div>
-  <div class="import-mode-tabs">
-    <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
-    <div class="import-mode-tab" id="modeTabCustom" onclick="setImportMode('custom')">Formato propio</div>
-  </div>
-  <div id="importSIGPAC">
-    <div class="format-box">
-      <div class="format-title">Columnas SIGPAC</div>
-      <div class="format-col-list">
-        <span class="format-col">Referencia SIGPAC</span><span class="format-col">Poligono</span><span class="format-col">Parcela</span><span class="format-col">Recinto</span><span class="format-col">Superficie TOTAL</span><span class="format-col">REGADIO / SECANO</span><span class="format-col">NOMBRE PARCELA</span><span class="format-col">POBLACION</span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title" style="margin-bottom:8px">Importar Excel SIGPAC</div>
-      <div class="upload-area" onclick="document.getElementById('fileInputSIGPAC').click()">
-        <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
-      </div>
-      <input type="file" id="fileInputSIGPAC" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'sigpac')">
-      <div id="previewContainerSIGPAC" style="display:none;margin-top:16px">
-        <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountSIGPAC">0</span> parcelas)</div>
-        <div style="overflow-x:auto"><table class="preview-table" id="previewTableSIGPAC"></table></div>
-        <button class="btn-primary" onclick="confirmarImportacion('sigpac')">Importar parcelas</button>
-        <button class="btn-secondary" onclick="cancelarImportacion('sigpac')">Cancelar</button>
-      </div>
-    </div>
-    <div class="card" style="margin-top:12px">
-      <div class="card-title" style="margin-bottom:8px">Plantilla de explotaci&#243;n</div>
-      <p style="font-size:13px;color:#888;margin-bottom:12px">Descarga la plantilla oficial con el formato correcto para importar tus campos.</p>
-      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('sigpac')">&#128229; Descargar plantilla explotaci&#243;n (.xlsx)</button>
+  <!-- IMPORTAR PARCELAS -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-importar')">
+    <div class="ajuste-item-header">
+      <span>&#128202; Importar parcelas</span><span class="ajuste-arrow" id="arrow-ajuste-importar">&#8250;</span>
     </div>
   </div>
-  <div id="importCustom" style="display:none">
-    <div class="format-box">
-      <div class="format-title">Columnas formato propio</div>
-      <div class="format-col-list">
-        <span class="format-col">Nombre</span><span class="format-col">Referencia Catastral</span><span class="format-col">Superficie (ha)</span><span class="format-col">Municipio</span><span class="format-col">Provincia</span><span class="format-col">Cultivo</span><span class="format-col">Semilla</span><span class="format-col">Fecha Siembra</span>
+  <div class="ajuste-body" id="ajuste-importar">
+    <div class="import-mode-tabs">
+      <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
+      <div class="import-mode-tab" id="modeTabCustom" onclick="setImportMode('custom')">Formato propio</div>
+    </div>
+    <div id="importSIGPAC">
+      <div class="format-box">
+        <div class="format-title">Columnas SIGPAC</div>
+        <div class="format-col-list">
+          <span class="format-col">Referencia SIGPAC</span><span class="format-col">Poligono</span><span class="format-col">Parcela</span><span class="format-col">Recinto</span><span class="format-col">Superficie TOTAL</span><span class="format-col">REGADIO / SECANO</span><span class="format-col">NOMBRE PARCELA</span><span class="format-col">POBLACION</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:8px">Importar Excel SIGPAC</div>
+        <div class="upload-area" onclick="document.getElementById('fileInputSIGPAC').click()">
+          <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
+        </div>
+        <input type="file" id="fileInputSIGPAC" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'sigpac')">
+        <div id="previewContainerSIGPAC" style="display:none;margin-top:16px">
+          <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountSIGPAC">0</span> parcelas)</div>
+          <div style="overflow-x:auto"><table class="preview-table" id="previewTableSIGPAC"></table></div>
+          <button class="btn-primary" onclick="confirmarImportacion('sigpac')">Importar parcelas</button>
+          <button class="btn-secondary" onclick="cancelarImportacion('sigpac')">Cancelar</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title" style="margin-bottom:8px">Plantilla de explotaci&#243;n</div>
+        <p style="font-size:13px;color:#888;margin-bottom:12px">Descarga la plantilla oficial con el formato correcto para importar tus campos.</p>
+        <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('sigpac')">&#128229; Descargar plantilla explotaci&#243;n (.xlsx)</button>
       </div>
     </div>
-    <div class="card">
-      <div class="card-title" style="margin-bottom:8px">Importar Excel propio</div>
-      <div class="upload-area" onclick="document.getElementById('fileInputCustom').click()">
-        <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
+    <div id="importCustom" style="display:none">
+      <div class="format-box">
+        <div class="format-title">Columnas formato propio</div>
+        <div class="format-col-list">
+          <span class="format-col">Nombre</span><span class="format-col">Referencia Catastral</span><span class="format-col">Superficie (ha)</span><span class="format-col">Municipio</span><span class="format-col">Provincia</span><span class="format-col">Cultivo</span><span class="format-col">Semilla</span><span class="format-col">Fecha Siembra</span>
+        </div>
       </div>
-      <input type="file" id="fileInputCustom" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'custom')">
-      <div id="previewContainerCustom" style="display:none;margin-top:16px">
-        <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountCustom">0</span> parcelas)</div>
-        <div style="overflow-x:auto"><table class="preview-table" id="previewTableCustom"></table></div>
-        <button class="btn-primary" onclick="confirmarImportacion('custom')">Importar parcelas</button>
-        <button class="btn-secondary" onclick="cancelarImportacion('custom')">Cancelar</button>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:8px">Importar Excel propio</div>
+        <div class="upload-area" onclick="document.getElementById('fileInputCustom').click()">
+          <div class="upload-icon">&#128202;</div><div class="upload-text">Selecciona el Excel</div><div class="upload-hint">.xlsx o .xls</div>
+        </div>
+        <input type="file" id="fileInputCustom" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event,'custom')">
+        <div id="previewContainerCustom" style="display:none;margin-top:16px">
+          <div style="font-weight:700;margin-bottom:8px;color:var(--verde)">Vista previa (<span id="previewCountCustom">0</span> parcelas)</div>
+          <div style="overflow-x:auto"><table class="preview-table" id="previewTableCustom"></table></div>
+          <button class="btn-primary" onclick="confirmarImportacion('custom')">Importar parcelas</button>
+          <button class="btn-secondary" onclick="cancelarImportacion('custom')">Cancelar</button>
+        </div>
       </div>
-    </div>
-    <div class="card" style="margin-top:12px">
-      <div class="card-title" style="margin-bottom:8px">Plantilla formato propio</div>
-      <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('custom')">Descargar plantilla</button>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title" style="margin-bottom:8px">Plantilla formato propio</div>
+        <button class="btn-secondary" style="margin-top:0" onclick="descargarPlantilla('custom')">Descargar plantilla</button>
+      </div>
     </div>
   </div>
+
 </div>
 
 <!-- MODAL PARCELA -->
@@ -1297,7 +1323,23 @@ function hashPassword(pass) {
     });
 }
 
-function renderLoginUsers() {
+function toggleAjuste(id, loadData) {
+  var body  = document.getElementById(id);
+  var arrow = document.getElementById('arrow-' + id);
+  var isOpen = body.classList.contains('open');
+  // Cerrar todos
+  document.querySelectorAll('.ajuste-body').forEach(function(b){ b.classList.remove('open'); });
+  document.querySelectorAll('.ajuste-arrow').forEach(function(a){ a.classList.remove('open'); });
+  if (!isOpen) {
+    body.classList.add('open');
+    if (arrow) arrow.classList.add('open');
+    // Cargar datos si hace falta
+    if (loadData) {
+      if (id === 'ajuste-campanas') renderCampanasAjustes();
+      if (id === 'ajuste-trabajadores') renderTrabajadores();
+    }
+  }
+}
   // Accesos recientes desactivados
 }
 
