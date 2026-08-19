@@ -1489,6 +1489,7 @@ function entrarApp(u) {
 function _aplicarPermisos() {
   var navItems = document.querySelectorAll('#appNav .nav-item');
   if (rolActual === 'worker') {
+    // Ocultar Semillas, Maquinaria y Ajustes del nav
     if (navItems[2]) navItems[2].style.display = 'none';
     if (navItems[3]) navItems[3].style.display = 'none';
     if (navItems[4]) navItems[4].style.display = 'none';
@@ -1500,8 +1501,7 @@ function _aplicarPermisos() {
         '.pac-btn-editar, .pac-btn-borrar, .pac-btn-anadir { display:none !important; }' +
         '.pac-btn-edit-laboreo, .pac-btn-del-laboreo { display:none !important; }' +
         '.btn-del-campana { display:none !important; }' +
-        '#btnNuevaCampana, .fab { display:none !important; }' +
-        ';
+        '#btnNuevaCampana, .fab { display:none !important; }';
       document.head.appendChild(style);
     }
   } else {
