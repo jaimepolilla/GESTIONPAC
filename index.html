@@ -1310,7 +1310,7 @@ function restaurarCopiaLogin(event) {
       DB.set('u_'+uid+'_parcelas',      datos.parcelas      || []);
       DB.set('u_'+uid+'_semillas',      datos.semillas      || []);
       DB.set('u_'+uid+'_declaraciones', datos.declaraciones || []);
-renderLoginUsers();
+// renderLoginUsers();
       alert('Datos de ' + nombreUsuario + ' restaurados. Ya puedes seleccionar tu usuario.');
     } catch(err) {
       alert('Error al leer el archivo: ' + err.message);
@@ -3181,7 +3181,7 @@ showPage = function(name) {
   }
 };
 
-renderLoginUsers();
+// renderLoginUsers();
 // No auto-login: siempre mostrar pantalla de login para verificar contraseña
 
 // ── DESCARGAR PLANTILLA ─────────────────────────────────────────
