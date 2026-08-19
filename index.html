@@ -757,57 +757,62 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 <div id="page-importar" class="page">
   <div style="font-size:22px;font-weight:800;color:var(--verde);margin-bottom:16px">&#9881; Ajustes</div>
 
-  <!-- EXPORTAR -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--verde)">
-    <div style="font-size:15px;font-weight:700;color:var(--verde);margin-bottom:6px">&#128229; Exportar a Excel</div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Elige qu&#233; datos quieres exportar.</div>
-    <button id="btnExportarAjustes" style="width:100%;padding:14px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#128229; Exportar declaraci&#243;n de cultivos</button>
-    <button id="btnExportarTrabajos" style="width:100%;padding:14px;background:var(--verde-fondo);color:var(--verde);border:1.5px solid var(--borde);border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#x1F69C; Exportar trabajos por parcela</button>
+  <!-- ── SECCIÓN: MI CUENTA ── -->
+  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:4px">MI CUENTA</div>
+
+  <!-- Exportar (solo propietario) -->
+  <div class="card ajustes-owner" style="margin-bottom:10px">
+    <div style="font-size:14px;font-weight:700;color:var(--verde);margin-bottom:10px">&#128229; Exportar datos</div>
+    <button id="btnExportarAjustes" style="width:100%;padding:12px;background:var(--verde);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:8px;">&#128229; Exportar declaración de cultivos</button>
+    <button id="btnExportarTrabajos" style="width:100%;padding:12px;background:var(--verde-fondo);color:var(--verde);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#x1F69C; Exportar trabajos por parcela</button>
   </div>
 
-  <!-- SINCRONIZACION EN TIEMPO REAL -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--azul)">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-      <span style="font-size:15px;font-weight:700;color:var(--azul)">&#9729;&#65039; Sincronización en tiempo real</span>
-      <span id="syncStatusAjustes" style="font-size:12px;background:var(--azul-claro);color:var(--azul);border-radius:20px;padding:2px 10px;font-weight:600">Activa</span>
-    </div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Los datos se sincronizan automáticamente entre todos tus dispositivos vía Firebase. Cualquier cambio aparece en segundos en iPhone, PC, etc.</div>
-    <button onclick="if(window._saveToFirestore){window._saveToFirestore();toast('Sync manual enviado ✔');}" style="width:100%;padding:13px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#9654; Forzar sincronización ahora</button>
-    <div style="background:var(--azul-claro);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--azul);margin-bottom:10px">
-      <b>Para configurar Firebase</b> la primera vez, edita las constantes <code>FIREBASE_CONFIG</code> en el código fuente con los datos de tu proyecto (ver instrucciones abajo).
-    </div>
-  </div>
-  <!-- COPIA DE SEGURIDAD (respaldo manual) -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid #7f8c8d">
-    <div style="font-size:15px;font-weight:700;color:#555;margin-bottom:6px">&#128190; Copia de seguridad manual</div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Descarga un archivo .json de respaldo o restaura desde uno existente.</div>
-    <button id="btnCopiaAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:10px;">&#128229; Descargar copia .json</button>
+  <!-- Copia de seguridad (solo propietario) -->
+  <div class="card ajustes-owner" style="margin-bottom:10px">
+    <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:10px">&#128190; Copia de seguridad</div>
+    <button id="btnCopiaAjustes" style="width:100%;padding:12px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;margin-bottom:8px;">&#128229; Descargar copia .json</button>
     <button id="btnRestaurarAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Restaurar desde .json</button>
   </div>
-  <!-- CAMPAÑAS -->
-  <div class="card" style="margin-bottom:14px;border-left:4px solid var(--rojo)">
-    <div style="font-size:15px;font-weight:700;color:var(--rojo);margin-bottom:6px">&#128465; Gestionar campa&#241;as</div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Elimina campa&#241;as que ya no necesites. Se borrar&#225;n todos sus cultivos y laboreos asociados.</div>
+
+  <!-- ── SECCIÓN: CAMPAÑAS (solo propietario) ── -->
+  <div class="ajustes-owner" style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px">CAMPAÑAS</div>
+  <div class="card ajustes-owner" style="margin-bottom:10px">
+    <div style="font-size:14px;font-weight:700;color:var(--rojo);margin-bottom:10px">&#128465; Gestionar campañas</div>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina campañas que ya no necesites. Se borrarán todos sus cultivos y laboreos asociados.</div>
     <div id="listaCampanasAjustes"></div>
   </div>
 
-  <!-- TRABAJADORES (solo propietario) -->
-  <div class="card" id="cardTrabajadores" style="margin-bottom:14px;border-left:4px solid #8e44ad;display:none">
-    <div style="font-size:15px;font-weight:700;color:#8e44ad;margin-bottom:6px">&#128100; Trabajadores</div>
-    <div style="font-size:13px;color:#666;margin-bottom:14px">Los trabajadores pueden registrar laboreos en tus parcelas pero no pueden modificar datos ni ajustes.</div>
+  <!-- ── SECCIÓN: EQUIPO (solo propietario) ── -->
+  <div class="card ajustes-owner" id="cardTrabajadores" style="margin-bottom:10px">
+    <div style="font-size:14px;font-weight:700;color:#8e44ad;margin-bottom:10px">&#128100; Trabajadores</div>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Los trabajadores pueden registrar laboreos pero no pueden modificar datos ni ajustes.</div>
     <div id="listaTrabajadores" style="margin-bottom:12px"></div>
-    <div style="border-top:1px solid var(--borde);padding-top:14px;margin-top:4px">
+    <div style="border-top:1px solid var(--borde);padding-top:14px">
       <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">Añadir trabajador</div>
       <input type="text" id="workerNombre" placeholder="Nombre del trabajador" maxlength="30" style="margin-bottom:8px">
       <input type="text" id="workerApellidos" placeholder="Apellidos del trabajador" maxlength="60" style="margin-bottom:8px">
-      <input type="password" id="workerPass" placeholder="Contraseña para el trabajador" maxlength="50" style="margin-bottom:8px">
-      <input type="email" id="workerEmail" placeholder="Email del trabajador (para recuperar contraseña)" maxlength="100" style="margin-bottom:8px">
+      <input type="password" id="workerPass" placeholder="Contraseña" maxlength="50" style="margin-bottom:8px">
+      <input type="email" id="workerEmail" placeholder="Email del trabajador" maxlength="100" style="margin-bottom:8px">
       <button onclick="crearTrabajador()" style="width:100%;padding:12px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear trabajador</button>
       <div id="workerError" style="color:var(--rojo);font-size:13px;margin-top:6px;min-height:16px"></div>
     </div>
   </div>
 
-  <div class="import-mode-tabs">
+  <!-- ── SECCIÓN: SINCRONIZACIÓN (solo propietario) ── -->
+  <div class="ajustes-owner" style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px">SISTEMA</div>
+  <div class="card ajustes-owner" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:14px;font-weight:700;color:var(--azul)">&#9729;&#65039; Sincronización</span>
+      <span id="syncStatusAjustes" style="font-size:12px;background:var(--azul-claro);color:var(--azul);border-radius:20px;padding:2px 10px;font-weight:600">Activa</span>
+    </div>
+    <div style="font-size:13px;color:#666;margin-bottom:10px">Datos sincronizados en tiempo real entre todos tus dispositivos.</div>
+    <button onclick="if(window._saveToFirestore){window._saveToFirestore();toast('Sync enviado \u2714');}" style="width:100%;padding:12px;background:var(--azul);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#9654; Forzar sincronización</button>
+  </div>
+
+  <!-- ── SECCIÓN: IMPORTAR PARCELAS ── -->
+  <div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin-bottom:8px;margin-top:12px" class="ajustes-owner">IMPORTAR PARCELAS</div>
+  <div class="ajustes-owner">
+  <div class="import-mode-tabs ajustes-owner">
     <div class="import-mode-tab active" id="modeTabSIGPAC" onclick="setImportMode('sigpac')">Formato SIGPAC</div>
     <div class="import-mode-tab" id="modeTabCustom" onclick="setImportMode('custom')">Formato propio</div>
   </div>
@@ -1484,37 +1489,27 @@ function entrarApp(u) {
 function _aplicarPermisos() {
   var navItems = document.querySelectorAll('#appNav .nav-item');
   if (rolActual === 'worker') {
-    // Nav: ocultar semillas, maquinaria, ajustes
     if (navItems[2]) navItems[2].style.display = 'none';
     if (navItems[3]) navItems[3].style.display = 'none';
     if (navItems[4]) navItems[4].style.display = 'none';
-    // FAB añadir parcela
-    var fab = document.getElementById('fabBtn');
-    if (fab) fab.style.display = 'none';
-    // Ocultar botón nueva campaña en PAC
-    var btnNuevaCamp = document.getElementById('btnNuevaCampana');
-    if (btnNuevaCamp) btnNuevaCamp.style.display = 'none';
-    // Añadir CSS para ocultar botones de editar/eliminar de parcelas y cultivos
     if (!document.getElementById('workerCSS')) {
       var style = document.createElement('style');
       style.id = 'workerCSS';
       style.textContent =
-        /* Parcelas: ocultar editar y eliminar */
         '.parc-btn-editar, .parc-btn-borrar { display:none !important; }' +
-        /* PAC cultivos: ocultar editar, borrar cultivo, añadir cultivo */
         '.pac-btn-editar, .pac-btn-borrar, .pac-btn-anadir { display:none !important; }' +
-        /* PAC laboreos: ocultar editar y borrar laboreo (solo puede añadir) */
         '.pac-btn-edit-laboreo, .pac-btn-del-laboreo { display:none !important; }' +
-        /* Campañas: ocultar botón eliminar campaña */
         '.btn-del-campana { display:none !important; }' +
-        /* Botón nueva campaña y FAB añadir parcela */
-        '#btnNuevaCampana, .fab { display:none !important; }';
+        '#btnNuevaCampana, .fab { display:none !important; }' +
+        '.ajustes-owner { display:none !important; }';
       document.head.appendChild(style);
     }
   } else {
     navItems.forEach(function(n){ n.style.display = ''; });
     var workerCSS = document.getElementById('workerCSS');
     if (workerCSS) workerCSS.remove();
+    var cardW = document.getElementById('cardTrabajadores');
+    if (cardW) cardW.style.display = '';
   }
 }
 
@@ -3103,9 +3098,6 @@ showPage = function(name) {
       b=document.getElementById('btnRestaurarAjustes'); if(b) b.onclick=function(){document.getElementById('fileInputRestore').click();};
       b=document.getElementById('btnPlantilla'); if(b) b.onclick=function(){descargarPlantilla('sigpac');};
       renderCampanasAjustes();
-      // Mostrar sección trabajadores solo al propietario
-      var cardW = document.getElementById('cardTrabajadores');
-      if (cardW) cardW.style.display = rolActual === 'owner' ? '' : 'none';
       if (rolActual === 'owner') renderTrabajadores();
     },50);
   }
