@@ -544,19 +544,42 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       autocomplete="current-password"
       onkeydown="if(event.key==='Enter')loginPorNombre()"
       oninput="document.getElementById('loginError').textContent=''">
-    <!-- Email solo para usuarios nuevos -->
-    <div id="loginEmailWrap" style="display:none">
-      <label style="margin-top:12px">Email <span style="font-weight:400;color:#aaa">(para recuperar contraseña)</span></label>
-      <input type="email" id="loginEmail" placeholder="tucorreo@email.com" maxlength="100" autocomplete="email">
-    </div>
     <div id="loginError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
     <button class="btn-primary" id="btnLoginEntrar" onclick="loginPorNombre()" style="margin-top:14px">Entrar</button>
     <button class="btn-link" onclick="mostrarRecuperarContrasena()" style="display:block;margin:10px auto 0">¿Olvidaste tu contraseña?</button>
     <div id="loginStatus" style="text-align:center;font-size:13px;color:#888;margin-top:8px;min-height:20px"></div>
-    <div id="loginRecientes" style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;display:none">
-      <div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:10px">Acceso reciente</div>
-      <div id="loginRecientesList"></div>
+    <div style="margin-top:24px;border-top:1px solid var(--borde);padding-top:18px;text-align:center">
+      <div style="font-size:13px;color:#aaa;margin-bottom:10px">¿Primera vez?</div>
+      <button class="btn-secondary" onclick="showScreen('screenRegistro')" style="width:100%">Crear cuenta nueva</button>
     </div>
+  </div>
+</div>
+
+<!-- REGISTRO -->
+<div class="screen" id="screenRegistro">
+  <div class="screen-logo">&#127806;</div>
+  <div class="screen-title">Crear cuenta</div>
+  <div class="screen-sub">Solo el propietario puede registrarse</div>
+  <div style="width:100%;max-width:380px">
+    <label>Nombre de usuario</label>
+    <input type="text" id="regNombre" placeholder="Tu nombre" maxlength="30"
+      autocomplete="username" autocorrect="off" autocapitalize="words" spellcheck="false"
+      oninput="document.getElementById('regError').textContent=''">
+    <label style="margin-top:12px">Contraseña</label>
+    <input type="password" id="regPass" placeholder="Contraseña" maxlength="50"
+      autocomplete="new-password"
+      oninput="document.getElementById('regError').textContent=''">
+    <label style="margin-top:12px">Repetir contraseña</label>
+    <input type="password" id="regPass2" placeholder="Repetir contraseña" maxlength="50"
+      autocomplete="new-password"
+      onkeydown="if(event.key==='Enter')registrarNuevo()"
+      oninput="document.getElementById('regError').textContent=''">
+    <label style="margin-top:12px">Email <span style="font-weight:400;color:#aaa">(para recuperar contraseña)</span></label>
+    <input type="email" id="regEmail" placeholder="tucorreo@email.com" maxlength="100"
+      autocomplete="email">
+    <div id="regError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
+    <button class="btn-primary" onclick="registrarNuevo()" style="margin-top:14px">Crear cuenta</button>
+    <button class="btn-secondary" onclick="showScreen('screenLogin')">Volver al login</button>
   </div>
 </div>
 
@@ -1221,88 +1244,69 @@ function loginPorNombre() {
 
   btn.disabled = true;
   errEl.textContent = '';
-  errEl.style.color = 'var(--rojo)';
-  status.textContent = '\u{1F504} Verificando…';
-
-  // Si el campo email está visible es la segunda pulsación (usuario nuevo confirmado)
-  var emailWrap = document.getElementById('loginEmailWrap');
-  var esSegundaPulsacion = emailWrap && emailWrap.style.display !== 'none';
-
-  if (esSegundaPulsacion) {
-    var email = (document.getElementById('loginEmail').value || '').trim();
-    status.textContent = '\u{1F195} Creando usuario…';
-    hashPassword(pass).then(function(passHash) {
-      var colorIdx = Math.floor(Math.random() * 6);
-      _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx);
-    });
-    return;
-  }
+  status.textContent = 'Verificando…';
 
   hashPassword(pass).then(function(passHash) {
     if (!window._lookupUserByName) {
       btn.disabled = false; status.textContent = '';
-      errEl.textContent = 'Sin conexión a Firebase. Espera unos segundos y vuelve a intentarlo.';
+      errEl.textContent = 'Sin conexión a Firebase. Espera unos segundos.';
       return;
     }
     window._lookupUserByName(nombre, passHash).then(function(resultado) {
       btn.disabled = false; status.textContent = '';
-
-      if (resultado === null && !window._getDB()) {
-        errEl.textContent = 'No se pudo conectar con Firebase. Recarga la página e inténtalo de nuevo.';
-        return;
-      }
-
       if (resultado === 'wrong_password') {
-        errEl.style.color = 'var(--rojo)';
         errEl.textContent = 'Contraseña incorrecta';
-        if (emailWrap) emailWrap.style.display = 'none';
         return;
       }
-
       if (!resultado) {
-        // Usuario no existe → pedir email para registrarse
-        if (emailWrap) emailWrap.style.display = '';
-        errEl.style.color = '#d35400';
-        errEl.textContent = 'Usuario no encontrado. Si eres nuevo, añade tu email y pulsa Entrar de nuevo.';
-        document.getElementById('loginEmail').focus();
+        errEl.textContent = 'Usuario no encontrado. Pulsa "Crear cuenta nueva" si eres nuevo.';
         return;
       }
-
-      // Login correcto
-      var recientes = _LS.get('pac_recientes', []).filter(function(r){ return r.nombre.toLowerCase() !== resultado.nombre.toLowerCase(); });
-      recientes.unshift({ nombre: resultado.nombre, colorIdx: resultado.colorIdx || 0 });
-      _LS.set('pac_recientes', recientes.slice(0, 3));
       entrarApp(resultado);
     });
   });
 }
 
-function _crearPropietarioNuevo(nombre, pass, passHash, email, colorIdx) {
-  var status = document.getElementById('loginStatus');
-  var errEl  = document.getElementById('loginError');
-  var btn    = document.getElementById('btnLoginEntrar');
+function registrarNuevo() {
+  var nombre = (document.getElementById('regNombre').value  || '').trim();
+  var pass   = (document.getElementById('regPass').value    || '').trim();
+  var pass2  = (document.getElementById('regPass2').value   || '').trim();
+  var email  = (document.getElementById('regEmail').value   || '').trim();
+  var errEl  = document.getElementById('regError');
 
-  // Crear en Firebase Auth si hay email
-  var authPromise = (email && window._authCreateUser)
-    ? window._authCreateUser(email, pass)
-    : Promise.resolve(null);
+  if (!nombre)                  { errEl.textContent = 'El nombre es obligatorio'; return; }
+  if (!pass || pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres'; return; }
+  if (pass !== pass2)           { errEl.textContent = 'Las contraseñas no coinciden'; return; }
 
-  authPromise.then(function(uid) {
-    if (window._createUserInFirestore) {
-      window._createUserInFirestore(nombre, passHash, email, colorIdx, uid).then(function(newId) {
-        btn.disabled = false; status.textContent = '';
-        if (!newId) { errEl.textContent = 'Error al crear usuario'; return; }
-        var u = { id: newId, nombre: nombre, colorIdx: colorIdx, rol: 'owner' };
-        var recientes = _LS.get('pac_recientes', []);
-        recientes.unshift({ nombre: nombre, colorIdx: colorIdx });
-        _LS.set('pac_recientes', recientes.slice(0, 3));
-        entrarApp(u);
+  errEl.style.color = '#888';
+  errEl.textContent = 'Comprobando disponibilidad…';
+
+  hashPassword(pass).then(function(passHash) {
+    window._lookupUserByName(nombre, '').then(function(existe) {
+      if (existe && existe !== 'wrong_password') {
+        errEl.style.color = 'var(--rojo)';
+        errEl.textContent = 'Ese nombre ya está en uso. Elige otro.';
+        return;
+      }
+      // Nombre libre -> crear
+      errEl.textContent = 'Creando cuenta…';
+      var colorIdx = Math.floor(Math.random() * 6);
+      var authPromise = (email && window._authCreateUser)
+        ? window._authCreateUser(email, pass)
+        : Promise.resolve(null);
+      authPromise.then(function(authUid) {
+        window._createUserInFirestore(nombre, passHash, email, colorIdx, authUid).then(function(newId) {
+          errEl.textContent = '';
+          if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Error al crear. Inténtalo de nuevo.'; return; }
+          entrarApp({ id: newId, nombre: nombre, colorIdx: colorIdx, rol: 'owner' });
+        });
       });
-    }
+    });
   });
 }
 
 function registrarUsuario() { loginPorNombre(); }
+
 
 // rol actual: 'owner' o 'worker'
 var rolActual = 'owner';
