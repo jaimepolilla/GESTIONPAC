@@ -2907,47 +2907,6 @@ function _maqIconHTML(m) {
   }
   return '<div class="maq-icon" style="padding:4px;background:#f5f5f5;overflow:hidden">' + _tipoSVG(m.tipo||'Otro') + '</div>';
 }
-    { keys: ['new holland'],              url: G + 'newholland.com' },
-    { keys: ['fendt'],                    url: G + 'fendt.com' },
-    { keys: ['claas'],                    url: G + 'claas.com' },
-    { keys: ['massey ferguson','massey'], url: G + 'masseyferguson.com' },
-    { keys: ['kubota'],                   url: G + 'kubota.com' },
-    { keys: ['deutz-fahr','deutz'],       url: G + 'deutz-fahr.com' },
-    { keys: ['valtra'],                   url: G + 'valtra.com' },
-    { keys: ['kverneland'],               url: G + 'kverneland.com' },
-    { keys: ['same'],                     url: G + 'samegroup.com' },
-    { keys: ['landini'],                  url: G + 'landini.it' },
-    { keys: ['ebro'],                     url: G + 'ebro.com' },
-    { keys: ['amazone'],                  url: G + 'amazone.de' },
-    { keys: ['horsch'],                   url: G + 'horsch.com' },
-    { keys: ['lemken'],                   url: G + 'lemken.com' },
-    { keys: ['kuhn'],                     url: G + 'kuhn.com' },
-    { keys: ['krone'],                    url: G + 'krone.de' },
-    { keys: ['poettinger','pöttinger'], url: G + 'poettinger.at' },
-    { keys: ['grimme'],                   url: G + 'grimme.de' },
-    { keys: ['joskin'],                   url: G + 'joskin.com' },
-    { keys: ['fliegl'],                   url: G + 'fliegl.com' },
-    { keys: ['manitou'],                  url: G + 'manitou.com' },
-    { keys: ['merlo'],                    url: G + 'merlo.it' },
-    { keys: ['jcb'],                      url: G + 'jcb.com' },
-    { keys: ['caterpillar','cat '],       url: G + 'caterpillar.com' },
-    { keys: ['steyr'],                    url: G + 'steyr-traktoren.com' },
-    { keys: ['zetor'],                    url: G + 'zetor.com' },
-    { keys: ['llorente'],                 url: G + 'llorente.es' },
-    { keys: ['agco'],                     url: G + 'agcocorp.com' },
-    { keys: ['challenger'],               url: G + 'challenger-ag.com' },
-    { keys: ['weidemann'],                url: G + 'weidemann.de' },
-    { keys: ['lamborghini'],              url: G + 'lamborghini-tractors.com' },
-    { keys: ['case'],                     url: G + 'caseih.com' },
-  ];
-  for (var i = 0; i < marcas.length; i++) {
-    for (var j = 0; j < marcas[i].keys.length; j++) {
-      if (texto.indexOf(marcas[i].keys[j]) !== -1) return marcas[i].url;
-    }
-  }
-  return null;
-}
-
 function renderMaquinaria() {
   var maquinaria = DB.get(uk('maquinaria'),[]);
   var cont = document.getElementById('listaMaquinaria');
