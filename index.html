@@ -254,11 +254,9 @@
       .then(function(snap) {
         if (!snap.empty) {
           var docData = snap.docs[0].data();
-          // Si no tiene contraseña aún (usuario migrado), aceptar cualquiera y guardar
           if (!docData._passHash) {
-            // Primera vez con contraseña: guardarla
-            snap.docs[0].ref.update({ _passHash: passHash });
-            return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0, rol: 'owner' };
+            // Usuario sin contraseña (antiguo): no dejar entrar, pedir que establezca contraseña
+            return 'no_password';
           }
           if (docData._passHash !== passHash) return 'wrong_password';
           return { id: snap.docs[0].id, nombre: docData._nombre_display || nombre, colorIdx: docData._colorIdx || 0, rol: 'owner' };
@@ -1256,6 +1254,10 @@ function loginPorNombre() {
       btn.disabled = false; status.textContent = '';
       if (resultado === 'wrong_password') {
         errEl.textContent = 'Contraseña incorrecta';
+        return;
+      }
+      if (resultado === 'no_password') {
+        errEl.textContent = 'Esta cuenta no tiene contraseña configurada. Usa "¿Olvidaste tu contraseña?" para establecerla.';
         return;
       }
       if (!resultado) {
