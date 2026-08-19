@@ -2704,39 +2704,38 @@ function mostrarConfirmacion(titulo, mensaje, callback) {
 }
 
 function _logoMarca(marca, nombre) {
-  // Detectar marca del campo marca o del nombre
   var texto = ((marca || '') + ' ' + (nombre || '')).toLowerCase();
-  var marcas = {
-    'john deere':   'https://logo.clearbit.com/deere.com',
-    'deere':        'https://logo.clearbit.com/deere.com',
-    'case':         'https://logo.clearbit.com/caseih.com',
-    'new holland':  'https://logo.clearbit.com/newholland.com',
-    'fendt':        'https://logo.clearbit.com/fendt.com',
-    'claas':        'https://logo.clearbit.com/claas.com',
-    'massey':       'https://logo.clearbit.com/masseyferguson.com',
-    'massey ferguson': 'https://logo.clearbit.com/masseyferguson.com',
-    'kubota':       'https://logo.clearbit.com/kubota.com',
-    'deutz':        'https://logo.clearbit.com/deutz.com',
-    'landini':      'https://logo.clearbit.com/landini.it',
-    'same':         'https://logo.clearbit.com/samegroup.com',
-    'valtra':       'https://logo.clearbit.com/valtra.com',
-    'steyr':        'https://logo.clearbit.com/steyr-traktoren.com',
-    'zetor':        'https://logo.clearbit.com/zetor.com',
-    'lamborghini':  'https://logo.clearbit.com/lamborghini.com',
-    'llorente':     null,
-    'amazone':      'https://logo.clearbit.com/amazone.de',
-    'horsch':       'https://logo.clearbit.com/horsch.com',
-    'lemken':       'https://logo.clearbit.com/lemken.com',
-    'kuhn':         'https://logo.clearbit.com/kuhn.com',
-    'krone':        'https://logo.clearbit.com/krone.de',
-    'poettinger':   'https://logo.clearbit.com/poettinger.at',
-    'agco':         'https://logo.clearbit.com/agcocorp.com',
-    'challenger':   'https://logo.clearbit.com/challenger-ag.com',
-    'caterpillar':  'https://logo.clearbit.com/caterpillar.com',
-    'cat ':         'https://logo.clearbit.com/caterpillar.com',
-  };
-  for (var key in marcas) {
-    if (texto.indexOf(key) !== -1 && marcas[key]) return marcas[key];
+  // Google S2 favicon service - siempre funciona cross-origin
+  var G = 'https://www.google.com/s2/favicons?sz=64&domain=';
+  var marcas = [
+    { keys: ['john deere','deere'],         url: G + 'deere.com' },
+    { keys: ['case ih','case'],             url: G + 'caseih.com' },
+    { keys: ['new holland'],                url: G + 'newholland.com' },
+    { keys: ['fendt'],                      url: G + 'fendt.com' },
+    { keys: ['claas'],                      url: G + 'claas.com' },
+    { keys: ['massey ferguson','massey'],   url: G + 'masseyferguson.com' },
+    { keys: ['kubota'],                     url: G + 'kubota.com' },
+    { keys: ['deutz-fahr','deutz'],         url: G + 'deutz-fahr.com' },
+    { keys: ['landini'],                    url: G + 'landini.it' },
+    { keys: ['same'],                       url: G + 'samegroup.com' },
+    { keys: ['valtra'],                     url: G + 'valtra.com' },
+    { keys: ['steyr'],                      url: G + 'steyr-traktoren.com' },
+    { keys: ['zetor'],                      url: G + 'zetor.com' },
+    { keys: ['amazone'],                    url: G + 'amazone.de' },
+    { keys: ['horsch'],                     url: G + 'horsch.com' },
+    { keys: ['lemken'],                     url: G + 'lemken.com' },
+    { keys: ['kuhn'],                       url: G + 'kuhn.com' },
+    { keys: ['krone'],                      url: G + 'krone.de' },
+    { keys: ['poettinger'],                 url: G + 'poettinger.at' },
+    { keys: ['agco'],                       url: G + 'agcocorp.com' },
+    { keys: ['caterpillar','cat '],         url: G + 'caterpillar.com' },
+    { keys: ['challenger'],                 url: G + 'challenger-ag.com' },
+    { keys: ['lamborghini'],                url: G + 'lamborghini.com' },
+  ];
+  for (var i = 0; i < marcas.length; i++) {
+    for (var j = 0; j < marcas[i].keys.length; j++) {
+      if (texto.indexOf(marcas[i].keys[j]) !== -1) return marcas[i].url;
+    }
   }
   return null;
 }
