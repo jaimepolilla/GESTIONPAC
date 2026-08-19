@@ -224,14 +224,14 @@
   // Guardar todos los datos en Firestore
   window._saveToFirestore = function() {
     if (!_db || !window.usuarioActual) return;
-    // Siempre guardar en el documento del propietario
     var targetId = (window.ownerIdActual) || window.usuarioActual.id;
     var payload = window._buildPayload ? window._buildPayload() : null;
     if (!payload) return;
     setSyncStatus('saving');
     _isSaving = true;
     var hash = _hash(payload);
-    _db.collection('pac_users').doc(targetId).set(payload)
+    // Usar merge:true para NO borrar campos como _email, _passHash, _authUid
+    _db.collection('pac_users').doc(targetId).set(payload, { merge: true })
       .then(function() {
         _lastSavedHash = hash;
         _isSaving = false;
