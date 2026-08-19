@@ -1337,31 +1337,42 @@ function registrarNuevo() {
   errEl.style.color = '#888';
   errEl.textContent = 'Comprobando disponibilidad…';
 
-  var db = window._getDB ? window._getDB() : null;
-  if (!db) { errEl.style.color='var(--rojo)'; errEl.textContent='Sin conexión a Firebase'; return; }
+  function _waitDB(cb) {
+    var db = window._getDB ? window._getDB() : null;
+    if (db) { cb(db); return; }
+    var n = 0, iv = setInterval(function() {
+      n++; var d = window._getDB ? window._getDB() : null;
+      if (d) { clearInterval(iv); cb(d); }
+      else if (n > 30) { clearInterval(iv); cb(null); }
+    }, 200);
+  }
 
-  // Verificar que el email no está ya registrado
-  db.collection('pac_users').where('_email', '==', email).get().then(function(snap) {
-    if (!snap.empty) {
-      errEl.style.color = 'var(--rojo)';
-      errEl.textContent = 'Ese email ya tiene una cuenta. Inicia sesión.';
-      return;
-    }
-    errEl.textContent = 'Creando cuenta…';
-    hashPassword(pass).then(function(passHash) {
-      var colorIdx = Math.floor(Math.random() * 6);
-      var authPromise = window._authCreateUser
-        ? window._authCreateUser(email, pass)
-        : Promise.resolve(null);
-      authPromise.then(function(authUid) {
-        window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
-          errEl.textContent = '';
-          if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
-          entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner', _email: email });
+  _waitDB(function(db) {
+    if (!db) { errEl.style.color='var(--rojo)'; errEl.textContent='Sin conexión a Firebase. Recarga la página.'; return; }
+
+    // Verificar que el email no está ya registrado
+    db.collection('pac_users').where('_email', '==', email).get().then(function(snap) {
+      if (!snap.empty) {
+        errEl.style.color = 'var(--rojo)';
+        errEl.textContent = 'Ese email ya tiene una cuenta. Inicia sesión.';
+        return;
+      }
+      errEl.textContent = 'Creando cuenta…';
+      hashPassword(pass).then(function(passHash) {
+        var colorIdx = Math.floor(Math.random() * 6);
+        var authPromise = window._authCreateUser
+          ? window._authCreateUser(email, pass)
+          : Promise.resolve(null);
+        authPromise.then(function(authUid) {
+          window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
+            errEl.textContent = '';
+            if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
+            entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner', _email: email });
+          });
         });
       });
-    });
-  }).catch(function() { errEl.style.color='var(--rojo)'; errEl.textContent='Error de conexión.'; });
+    }).catch(function() { errEl.style.color='var(--rojo)'; errEl.textContent='Error de conexión.'; });
+  });
 }
 
 function registrarUsuario() { loginPorEmail(); }
