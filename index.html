@@ -291,23 +291,6 @@
     if (!_db) return Promise.resolve(null);
     return _doLookup(nombre, passHash);
   };
-    if (!_db) {
-      return new Promise(function(resolve) {
-        var attempts = 0;
-        var interval = setInterval(function() {
-          attempts++;
-          if (_db) {
-            clearInterval(interval);
-            resolve(_doLookup(nombre, passHash));
-          } else if (attempts > 30) { // 6 segundos
-            clearInterval(interval);
-            resolve(null);
-          }
-        }, 200);
-      });
-    }
-    return _doLookup(nombre, passHash);
-  };
 
   function _doLookup(nombre, passHash) {
     if (!_db) return Promise.resolve(null);
