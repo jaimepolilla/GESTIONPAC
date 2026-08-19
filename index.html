@@ -394,26 +394,25 @@
   // Crear propietario nuevo en Firestore (con verificación de duplicados)
   window._createUserInFirestore = function(nombre, passHash, email, colorIdx, authUid) {
     if (!_db) return Promise.resolve(null);
-    if (!email) return Promise.resolve(null);
+    if (!email) { console.error('_createUserInFirestore: email vacío!'); return Promise.resolve(null); }
     var emailNorm = email.toLowerCase().trim();
+    console.log('_createUserInFirestore:', nombre, emailNorm, 'passHash:', passHash ? 'ok' : 'VACIO');
     // Verificar por EMAIL (identificador único)
     return _db.collection('pac_users')
       .where('_email', '==', emailNorm)
       .get()
       .then(function(snap) {
         if (!snap.empty) {
-          // Email ya existe — actualizar passHash si falta
           var existingDoc = snap.docs[0];
           var existingData = existingDoc.data();
           if (!existingData._passHash && passHash) {
             existingDoc.ref.update({ _passHash: passHash });
           }
-          console.warn('Email ya existe, reutilizando:', existingDoc.id);
+          console.log('Email ya existe, reutilizando:', existingDoc.id);
           return existingDoc.id;
         }
-        // Email nuevo → crear documento
         var id = Date.now().toString() + Math.random().toString(36).slice(2);
-        return _db.collection('pac_users').doc(id).set({
+        var docData = {
           _nombre:         nombre.toLowerCase().trim(),
           _nombre_display: nombre.trim(),
           _passHash:       passHash,
@@ -423,7 +422,10 @@
           _ts:             Date.now(),
           campanaActual: '', campanas: [], parcelas: [], semillas: [],
           declaraciones: [], maquinaria: [], laboreos: []
-        }).then(function() { return id; });
+        };
+        console.log('Creando documento con email:', emailNorm, 'passHash:', passHash ? 'ok' : 'VACIO');
+        return _db.collection('pac_users').doc(id).set(docData)
+          .then(function() { console.log('Documento creado:', id); return id; });
       })
       .catch(function(e) { console.error('createUser error:', e); return null; });
   };
