@@ -198,6 +198,13 @@
       if (snap.exists) {
         var data = snap.data();
         console.log('Datos cargados de Firestore para', userId, '- campanas:', (data.campanas||[]).length, 'parcelas:', (data.parcelas||[]).length);
+        // Preservar _email y _passHash en usuarioActual
+        if (window.usuarioActual) {
+          if (data._email)    window.usuarioActual._email    = data._email;
+          if (data._passHash) window.usuarioActual._passHash = data._passHash;
+          // Cachear passHash localmente
+          if (data._passHash) _LS.set('pac_passHash_' + userId, data._passHash);
+        }
         _cacheLocally(userId, data);
         if (onReady) onReady(data);
         _lastSavedHash = _hash(data);
@@ -254,11 +261,13 @@
   function _doLookupByEmail(email, passHash) {
     if (!_db) return Promise.resolve(null);
     var emailNorm = email.toLowerCase().trim();
-    // Buscar en propietarios por email
+    console.log('_doLookupByEmail buscando:', emailNorm);
     return _db.collection('pac_users').where('_email', '==', emailNorm).get()
       .then(function(snap) {
+        console.log('Resultados por email:', snap.size, snap.docs.map(function(d){ return d.id; }));
         if (!snap.empty) {
           var d = snap.docs[0].data();
+          console.log('Encontrado. _passHash existe:', !!d._passHash, 'coincide:', d._passHash === passHash);
           if (!d._passHash)              return 'no_password';
           if (d._passHash !== passHash)  return 'wrong_password';
           return { id: snap.docs[0].id, nombre: d._nombre_display || d._nombre, colorIdx: d._colorIdx || 0, rol: 'owner', _email: emailNorm };
@@ -1210,6 +1219,8 @@ window._buildPayload = function() {
     _nombre:         (usuarioActual.nombre||'').toLowerCase().trim(),
     _nombre_display: usuarioActual.nombre||'',
     _colorIdx:       usuarioActual.colorIdx||0,
+    _email:          usuarioActual._email || null,
+    _passHash:       usuarioActual._passHash || _LS.get('pac_passHash_' + usuarioActual.id, null) || null,
     _ts:             Date.now(),
     _foto:           usuarioActual.foto || _LS.get('pac_foto_' + usuarioActual.id, null) || null,
     campanaActual:   campanaActual,
@@ -1332,6 +1343,8 @@ function loginPorEmail() {
       if (resultado === 'wrong_password') { errEl.textContent = 'Contraseña incorrecta'; return; }
       if (resultado === 'no_password')    { errEl.textContent = 'Cuenta sin contraseña. Usa ¿Olvidaste tu contraseña?'; return; }
       if (!resultado)                     { errEl.textContent = 'Email no encontrado. ¿Quieres crear una cuenta nueva?'; return; }
+      // Guardar passHash en resultado para que _buildPayload lo preserve
+      resultado._passHash = passHash;
       entrarApp(resultado);
     });
   });
@@ -1401,7 +1414,8 @@ function registrarNuevo() {
           window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
             errEl.textContent = '';
             if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
-            entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner', _email: email });
+            var u = { id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner', _email: email, _passHash: passHash };
+            entrarApp(u);
           });
         });
       });
