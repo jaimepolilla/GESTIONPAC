@@ -559,12 +559,16 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="screen-title">Crear cuenta</div>
   <div class="screen-sub">Solo el propietario puede registrarse</div>
   <div style="width:100%;max-width:380px">
-    <label>Nombre de usuario</label>
+    <label>Nombre</label>
     <input type="text" id="regNombre" placeholder="Tu nombre" maxlength="30"
-      autocomplete="username" autocorrect="off" autocapitalize="words" spellcheck="false"
+      autocomplete="given-name" autocorrect="off" spellcheck="false"
+      oninput="document.getElementById('regError').textContent=''">
+    <label style="margin-top:12px">Apellidos</label>
+    <input type="text" id="regApellidos" placeholder="Tus apellidos" maxlength="60"
+      autocomplete="family-name" autocorrect="off" spellcheck="false"
       oninput="document.getElementById('regError').textContent=''">
     <label style="margin-top:12px">Contraseña</label>
-    <input type="password" id="regPass" placeholder="Contraseña" maxlength="50"
+    <input type="password" id="regPass" placeholder="M\u00ednimo 4 caracteres" maxlength="50"
       autocomplete="new-password"
       oninput="document.getElementById('regError').textContent=''">
     <label style="margin-top:12px">Repetir contraseña</label>
@@ -712,6 +716,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <div style="border-top:1px solid var(--borde);padding-top:14px;margin-top:4px">
       <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:10px">Añadir trabajador</div>
       <input type="text" id="workerNombre" placeholder="Nombre del trabajador" maxlength="30" style="margin-bottom:8px">
+      <input type="text" id="workerApellidos" placeholder="Apellidos del trabajador" maxlength="60" style="margin-bottom:8px">
       <input type="password" id="workerPass" placeholder="Contraseña para el trabajador" maxlength="50" style="margin-bottom:8px">
       <input type="email" id="workerEmail" placeholder="Email del trabajador (para recuperar contraseña)" maxlength="100" style="margin-bottom:8px">
       <button onclick="crearTrabajador()" style="width:100%;padding:12px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">+ Crear trabajador</button>
@@ -1270,43 +1275,67 @@ function loginPorNombre() {
 }
 
 function registrarNuevo() {
-  var nombre = (document.getElementById('regNombre').value  || '').trim();
-  var pass   = (document.getElementById('regPass').value    || '').trim();
-  var pass2  = (document.getElementById('regPass2').value   || '').trim();
-  var email  = (document.getElementById('regEmail').value   || '').trim();
-  var errEl  = document.getElementById('regError');
+  var nombre    = (document.getElementById('regNombre').value     || '').trim();
+  var apellidos = (document.getElementById('regApellidos').value  || '').trim();
+  var pass      = (document.getElementById('regPass').value       || '').trim();
+  var pass2     = (document.getElementById('regPass2').value      || '').trim();
+  var email     = (document.getElementById('regEmail').value      || '').trim();
+  var errEl     = document.getElementById('regError');
 
-  if (!nombre)                  { errEl.textContent = 'El nombre es obligatorio'; return; }
-  if (!pass || pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres'; return; }
-  if (pass !== pass2)           { errEl.textContent = 'Las contraseñas no coinciden'; return; }
+  if (!nombre)                  { errEl.style.color='var(--rojo)'; errEl.textContent = 'El nombre es obligatorio'; return; }
+  if (!apellidos)               { errEl.style.color='var(--rojo)'; errEl.textContent = 'Los apellidos son obligatorios'; return; }
+  if (!pass || pass.length < 4) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Mínimo 4 caracteres en la contraseña'; return; }
+  if (pass !== pass2)           { errEl.style.color='var(--rojo)'; errEl.textContent = 'Las contraseñas no coinciden'; return; }
+
+  var nombreCompleto = nombre + ' ' + apellidos;
+  var nombreNorm     = nombreCompleto.toLowerCase().trim();
 
   errEl.style.color = '#888';
   errEl.textContent = 'Comprobando disponibilidad…';
 
-  hashPassword(pass).then(function(passHash) {
-    window._lookupUserByName(nombre, '').then(function(existe) {
-      if (existe && existe !== 'wrong_password') {
-        errEl.style.color = 'var(--rojo)';
-        errEl.textContent = 'Ese nombre ya está en uso. Elige otro.';
-        return;
-      }
-      // Nombre libre -> crear
-      errEl.textContent = 'Creando cuenta…';
-      var colorIdx = Math.floor(Math.random() * 6);
-      var authPromise = (email && window._authCreateUser)
-        ? window._authCreateUser(email, pass)
-        : Promise.resolve(null);
-      authPromise.then(function(authUid) {
-        window._createUserInFirestore(nombre, passHash, email, colorIdx, authUid).then(function(newId) {
-          errEl.textContent = '';
-          if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Error al crear. Inténtalo de nuevo.'; return; }
-          entrarApp({ id: newId, nombre: nombre, colorIdx: colorIdx, rol: 'owner' });
+  var db = window._getDB ? window._getDB() : null;
+  if (!db) { errEl.style.color='var(--rojo)'; errEl.textContent='Sin conexión a Firebase'; return; }
+
+  // Comprobar duplicado en propietarios
+  db.collection('pac_users').where('_nombre', '==', nombreNorm).get().then(function(snap) {
+    if (!snap.empty) {
+      errEl.style.color = 'var(--rojo)';
+      errEl.textContent = 'Ya existe un usuario con ese nombre y apellidos.';
+      return;
+    }
+    // Comprobar en workers
+    db.collection('pac_users').get().then(function(ownersSnap) {
+      var checks = ownersSnap.docs.map(function(ownerDoc) {
+        return ownerDoc.ref.collection('workers').where('_nombre', '==', nombreNorm).get()
+          .then(function(wSnap) { return !wSnap.empty; });
+      });
+      Promise.all(checks).then(function(results) {
+        if (results.some(function(r){ return r; })) {
+          errEl.style.color = 'var(--rojo)';
+          errEl.textContent = 'Ya existe un trabajador con ese nombre y apellidos.';
+          return;
+        }
+        errEl.textContent = 'Creando cuenta…';
+        hashPassword(pass).then(function(passHash) {
+          var colorIdx = Math.floor(Math.random() * 6);
+          var authPromise = (email && window._authCreateUser)
+            ? window._authCreateUser(email, pass)
+            : Promise.resolve(null);
+          authPromise.then(function(authUid) {
+            window._createUserInFirestore(nombreCompleto, passHash, email, colorIdx, authUid).then(function(newId) {
+              errEl.textContent = '';
+              if (!newId) { errEl.style.color='var(--rojo)'; errEl.textContent='Error al crear. Inténtalo de nuevo.'; return; }
+              entrarApp({ id: newId, nombre: nombreCompleto, colorIdx: colorIdx, rol: 'owner' });
+            });
+          });
         });
       });
     });
+  }).catch(function() {
+    errEl.style.color = 'var(--rojo)';
+    errEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
   });
 }
-
 function registrarUsuario() { loginPorNombre(); }
 
 
@@ -3016,36 +3045,45 @@ function descargarPlantilla(mode) {
 
 // ── TRABAJADORES ─────────────────────────────────────────────────
 function crearTrabajador() {
-  var nombre = (document.getElementById('workerNombre').value || '').trim();
-  var pass   = (document.getElementById('workerPass').value   || '').trim();
-  var email  = (document.getElementById('workerEmail').value  || '').trim();
-  var errEl  = document.getElementById('workerError');
-  if (!nombre) { errEl.textContent = 'El nombre es obligatorio'; return; }
-  if (!pass || pass.length < 4) { errEl.textContent = 'Mínimo 4 caracteres'; return; }
-  errEl.textContent = 'Creando…';
+  var nombre    = (document.getElementById('workerNombre').value    || '').trim();
+  var apellidos = (document.getElementById('workerApellidos').value || '').trim();
+  var pass      = (document.getElementById('workerPass').value      || '').trim();
+  var email     = (document.getElementById('workerEmail').value     || '').trim();
+  var errEl     = document.getElementById('workerError');
+  if (!nombre)   { errEl.style.color='var(--rojo)'; errEl.textContent = 'El nombre es obligatorio'; return; }
+  if (!apellidos){ errEl.style.color='var(--rojo)'; errEl.textContent = 'Los apellidos son obligatorios'; return; }
+  if (!pass || pass.length < 4) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Mínimo 4 caracteres'; return; }
 
-  hashPassword(pass).then(function(passHash) {
-    var colorIdx = Math.floor(Math.random() * 6);
+  var nombreCompleto = nombre + ' ' + apellidos;
+  var nombreNorm = nombreCompleto.toLowerCase().trim();
+  var db = window._getDB ? window._getDB() : null;
+  if (!db) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Sin conexión'; return; }
 
-    // Crear cuenta Auth si hay email
-    var authPromise = (email && window._authCreateUser)
-      ? window._authCreateUser(email, pass)
-      : Promise.resolve(null);
+  errEl.style.color = '#888';
+  errEl.textContent = 'Comprobando…';
 
-    authPromise.then(function(authUid) {
-      window._createWorker(usuarioActual.id, nombre, passHash, email, colorIdx, authUid).then(function(id) {
-        if (!id) { errEl.textContent = 'Error al crear trabajador'; return; }
-        document.getElementById('workerNombre').value = '';
-        document.getElementById('workerPass').value = '';
-        document.getElementById('workerEmail').value = '';
-        errEl.textContent = '';
-        toast('Trabajador "' + nombre + '" creado \u2714');
-        renderTrabajadores();
+  db.collection('pac_users').where('_nombre', '==', nombreNorm).get().then(function(snap) {
+    if (!snap.empty) { errEl.style.color='var(--rojo)'; errEl.textContent='Ya existe un usuario con ese nombre y apellidos.'; return; }
+    hashPassword(pass).then(function(passHash) {
+      var colorIdx = Math.floor(Math.random() * 6);
+      var authPromise = (email && window._authCreateUser)
+        ? window._authCreateUser(email, pass)
+        : Promise.resolve(null);
+      authPromise.then(function(authUid) {
+        window._createWorker(usuarioActual.id, nombreCompleto, passHash, email, colorIdx, authUid).then(function(id) {
+          if (!id) { errEl.style.color='var(--rojo)'; errEl.textContent = 'Error al crear trabajador'; return; }
+          document.getElementById('workerNombre').value = '';
+          document.getElementById('workerApellidos').value = '';
+          document.getElementById('workerPass').value = '';
+          document.getElementById('workerEmail').value = '';
+          errEl.textContent = '';
+          toast('Trabajador "' + nombreCompleto + '" creado ✔');
+          renderTrabajadores();
+        });
       });
     });
-  });
+  }).catch(function(){ errEl.style.color='var(--rojo)'; errEl.textContent='Error de conexión.'; });
 }
-
 function renderTrabajadores() {
   var cont = document.getElementById('listaTrabajadores');
   if (!cont || rolActual !== 'owner') return;
