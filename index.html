@@ -394,22 +394,30 @@
   // Crear propietario nuevo en Firestore (con verificación de duplicados)
   window._createUserInFirestore = function(nombre, passHash, email, colorIdx, authUid) {
     if (!_db) return Promise.resolve(null);
-    // Verificar que no existe ya un usuario con ese nombre
+    if (!email) return Promise.resolve(null);
+    var emailNorm = email.toLowerCase().trim();
+    // Verificar por EMAIL (identificador único)
     return _db.collection('pac_users')
-      .where('_nombre', '==', nombre.toLowerCase().trim())
+      .where('_email', '==', emailNorm)
       .get()
       .then(function(snap) {
         if (!snap.empty) {
-          // Ya existe — devolver el ID existente en lugar de crear duplicado
-          console.warn('Usuario ya existe, reutilizando:', snap.docs[0].id);
-          return snap.docs[0].id;
+          // Email ya existe — actualizar passHash si falta
+          var existingDoc = snap.docs[0];
+          var existingData = existingDoc.data();
+          if (!existingData._passHash && passHash) {
+            existingDoc.ref.update({ _passHash: passHash });
+          }
+          console.warn('Email ya existe, reutilizando:', existingDoc.id);
+          return existingDoc.id;
         }
+        // Email nuevo → crear documento
         var id = Date.now().toString() + Math.random().toString(36).slice(2);
         return _db.collection('pac_users').doc(id).set({
           _nombre:         nombre.toLowerCase().trim(),
           _nombre_display: nombre.trim(),
           _passHash:       passHash,
-          _email:          email || null,
+          _email:          emailNorm,
           _authUid:        authUid || null,
           _colorIdx:       colorIdx,
           _ts:             Date.now(),
@@ -417,7 +425,7 @@
           declaraciones: [], maquinaria: [], laboreos: []
         }).then(function() { return id; });
       })
-      .catch(function() { return null; });
+      .catch(function(e) { console.error('createUser error:', e); return null; });
   };
 
 })();
@@ -3161,8 +3169,14 @@ function crearTrabajador() {
   errEl.style.color = '#888';
   errEl.textContent = 'Comprobando…';
 
-  db.collection('pac_users').where('_nombre', '==', nombreNorm).get().then(function(snap) {
-    if (!snap.empty) { errEl.style.color='var(--rojo)'; errEl.textContent='Ya existe un usuario con ese nombre y apellidos.'; return; }
+  if (!email || !email.includes('@')) {
+    errEl.style.color = 'var(--rojo)';
+    errEl.textContent = 'El email es obligatorio para crear un trabajador';
+    return;
+  }
+
+  db.collection('pac_users').where('_email', '==', email.toLowerCase()).get().then(function(snap) {
+    if (!snap.empty) { errEl.style.color='var(--rojo)'; errEl.textContent='Ya existe un usuario con ese email.'; return; }
     hashPassword(pass).then(function(passHash) {
       var colorIdx = Math.floor(Math.random() * 6);
       var authPromise = (email && window._authCreateUser)
