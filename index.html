@@ -82,6 +82,19 @@
     window._tryInitFirebase();
   }
 
+  // Reintento por polling — garantiza init aunque onload no dispare
+  var _initPollCount = 0;
+  var _initPoll = setInterval(function() {
+    _initPollCount++;
+    if (_db) { clearInterval(_initPoll); return; }
+    if (typeof firebase !== 'undefined' && firebase.firestore) {
+      window._firebaseAppLoaded = true;
+      window._firebaseFirestoreLoaded = true;
+      window._tryInitFirebase();
+    }
+    if (_initPollCount > 30) clearInterval(_initPoll); // 6 segundos máximo
+  }, 200);
+
   // ── FIREBASE AUTH HELPERS ─────────────────────────────────────────
 
   // Crear cuenta Auth (email + contraseña)
@@ -633,8 +646,9 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       onkeydown="if(event.key==='Enter')registrarNuevo()"
       oninput="document.getElementById('regError').textContent=''">
     <div id="regError" style="color:var(--rojo);font-size:13px;min-height:18px;margin-top:6px"></div>
-    <button class="btn-primary" onclick="registrarNuevo()" style="margin-top:14px">Crear cuenta</button>
+    <button class="btn-primary" id="btnRegistrar" onclick="registrarNuevo()" style="margin-top:14px">Crear cuenta</button>
     <button class="btn-secondary" onclick="showScreen('screenLogin')">Volver al login</button>
+    <div id="regFirebaseStatus" style="text-align:center;font-size:12px;color:#aaa;margin-top:8px"></div>
   </div>
 </div>
 
@@ -1340,10 +1354,20 @@ function registrarNuevo() {
   function _waitDB(cb) {
     var db = window._getDB ? window._getDB() : null;
     if (db) { cb(db); return; }
+    var statusEl = document.getElementById('regFirebaseStatus');
+    if (statusEl) statusEl.textContent = 'Conectando con Firebase…';
     var n = 0, iv = setInterval(function() {
-      n++; var d = window._getDB ? window._getDB() : null;
-      if (d) { clearInterval(iv); cb(d); }
-      else if (n > 30) { clearInterval(iv); cb(null); }
+      n++;
+      var d = window._getDB ? window._getDB() : null;
+      if (d) {
+        clearInterval(iv);
+        if (statusEl) statusEl.textContent = '';
+        cb(d);
+      } else if (n > 40) {
+        clearInterval(iv);
+        if (statusEl) statusEl.textContent = '';
+        cb(null);
+      }
     }, 200);
   }
 
