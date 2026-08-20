@@ -1081,8 +1081,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <!-- Selector múltiple de parcelas (cuando se abre desde Trabajos) -->
     <div id="laboreoMultiParcelasDiv" style="display:none;margin-bottom:14px">
       <label>Aplicar a estas parcelas *</label>
-      <div style="font-size:12px;color:#888;margin-bottom:8px">Selecciona una o varias parcelas</div>
-      <div id="laboreoMultiParcelas" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--borde);border-radius:10px;padding:4px"></div>
+      <input type="text" id="searchMultiParcelas" placeholder="Buscar parcela..." style="margin-bottom:8px" oninput="filtrarMultiParcelas()">
+      <div id="laboreoMultiParcelas" style="max-height:200px;overflow-y:auto;border:1.5px solid var(--borde);border-radius:10px;padding:4px"></div>
+      <div style="margin-top:6px;display:flex;gap:8px">
+        <button type="button" onclick="seleccionarTodasParcelas(true)" style="font-size:12px;padding:4px 10px;border:1px solid var(--borde);border-radius:8px;background:white;cursor:pointer;color:var(--verde);font-weight:600">Seleccionar todas</button>
+        <button type="button" onclick="seleccionarTodasParcelas(false)" style="font-size:12px;padding:4px 10px;border:1px solid var(--borde);border-radius:8px;background:white;cursor:pointer;color:#888;font-weight:600">Ninguna</button>
+      </div>
     </div>
     <label>Tipo de labor *</label>
     <select id="laboreoTipo">
@@ -3229,12 +3233,32 @@ function anadirFert() {
   renderFertList();
 }
 
+function filtrarMultiParcelas() {
+  var busq = (document.getElementById('searchMultiParcelas').value || '').toLowerCase().trim();
+  var items = document.querySelectorAll('#laboreoMultiParcelas label');
+  items.forEach(function(item) {
+    var texto = item.textContent.toLowerCase();
+    item.style.display = (!busq || texto.indexOf(busq) !== -1) ? '' : 'none';
+  });
+}
+
+function seleccionarTodasParcelas(sel) {
+  var busq = (document.getElementById('searchMultiParcelas').value || '').toLowerCase().trim();
+  document.querySelectorAll('#laboreoMultiParcelas label').forEach(function(item) {
+    if (!busq || item.textContent.toLowerCase().indexOf(busq) !== -1) {
+      var chk = item.querySelector('input[type=checkbox]');
+      if (chk) chk.checked = sel;
+    }
+  });
+}
+
 function abrirModalLaboreoMulti() {
   // Modo multi-parcela: ocultar info de parcela única, mostrar selector múltiple
   document.getElementById('laboreoParcelaId').value = '';
   document.getElementById('laboreoLineaId').value = '';
   document.getElementById('laboreoParcelaInfo').style.display = 'none';
   document.getElementById('laboreoMultiParcelasDiv').style.display = '';
+  document.getElementById('searchMultiParcelas').value = '';
 
   // Renderizar checkboxes de parcelas
   var cont = document.getElementById('laboreoMultiParcelas');
