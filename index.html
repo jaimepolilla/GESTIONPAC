@@ -1202,7 +1202,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     Trabajos
   </div>
   <div class="nav-item" onclick="showPage('importar')">
-    <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></span>
+    <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
     Ajustes
   </div>
 </nav>
@@ -1876,19 +1876,38 @@ function abrirPerfil() {
   var u = usuarioActual;
   document.getElementById('perfilNombreTitle').textContent = u.nombre;
   document.getElementById('perfilNombreGrande').textContent = u.nombre;
-  document.getElementById('perfilRolBadge').textContent = rolActual === 'worker' ? '\u{1F477} Trabajador' : '\u{1F451} Propietario';
-  // Limpiar campos contraseña
+  document.getElementById('perfilRolBadge').textContent = rolActual === 'worker' ? '\uD83D\uDC77 Trabajador' : '\uD83D\uDC51 Propietario';
   ['perfilPassActual','perfilPassNueva','perfilPassRepite'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('perfilPassError').textContent = '';
-  // Email actual
-  var emailActual = u._email || u.email || null;
+  document.getElementById('perfilEmailError').textContent = '';
+
+  // Cargar email propio desde Firestore (no mezclar con el del propietario)
   var emailActualEl = document.getElementById('perfilEmailActual');
   var emailNuevoEl  = document.getElementById('perfilEmailNuevo');
-  var emailErrorEl  = document.getElementById('perfilEmailError');
-  emailActualEl.textContent = emailActual ? '\u{1F4E7} Email actual: ' + emailActual : 'Sin email registrado';
-  emailNuevoEl.value = emailActual || '';
-  emailErrorEl.textContent = '';
-  // Renderizar avatar
+  emailActualEl.textContent = 'Cargando...';
+  emailNuevoEl.value = '';
+
+  var db = window._getDB ? window._getDB() : null;
+  if (db) {
+    var docRef = rolActual === 'worker'
+      ? db.collection('pac_users').doc(ownerIdActual).collection('workers').doc(u.id)
+      : db.collection('pac_users').doc(u.id);
+    docRef.get().then(function(snap) {
+      var emailActual = (snap.exists && snap.data()._email) || null;
+      u._email = emailActual; // actualizar en memoria
+      emailActualEl.textContent = emailActual ? '\uD83D\uDCE7 Email actual: ' + emailActual : 'Sin email registrado';
+      emailNuevoEl.value = emailActual || '';
+    }).catch(function() {
+      var emailActual = u._email || null;
+      emailActualEl.textContent = emailActual ? '\uD83D\uDCE7 Email actual: ' + emailActual : 'Sin email registrado';
+      emailNuevoEl.value = emailActual || '';
+    });
+  } else {
+    var emailActual = u._email || null;
+    emailActualEl.textContent = emailActual ? '\uD83D\uDCE7 Email actual: ' + emailActual : 'Sin email registrado';
+    emailNuevoEl.value = emailActual || '';
+  }
+
   _renderPerfilAvatar();
   document.getElementById('modalPerfil').classList.add('open');
 }
@@ -2053,7 +2072,8 @@ function showPage(name) {
   var navItems = document.querySelectorAll('.nav-item');
   for(var i=0;i<navItems.length;i++) navItems[i].classList.remove('active');
   document.getElementById('page-' + name).classList.add('active');
-  var idx = ['pac','parcelas','semillas','maquinaria','importar'].indexOf(name);
+  var navPageOrder = ['pac','parcelas','semillas','maquinaria','trabajos','importar'];
+  var idx = navPageOrder.indexOf(name);
   if(idx>=0) navItems[idx].classList.add('active');
   document.getElementById('fabBtn').classList.toggle('hidden', name !== 'parcelas');
   if(name==='pac')        { renderPAC(); }
