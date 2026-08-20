@@ -2208,32 +2208,45 @@ function superUsada(parcelaId) {
 
 function iconoParcela(p) {
   var nombre = (p.nombre || '').toLowerCase();
-  var cat    = '';
-  // Check declaraciones for this parcela to get categoria
+  var cat = '';
+  var cultivoNombre = '';
+
+  // Primero buscar cultivo declarado en la campaña actual
   for(var i=0;i<declaraciones.length;i++){
     if(declaraciones[i].parcelaId===p.id && declaraciones[i].campana===campanaActual){
       cat = (declaraciones[i].categoria||'').toLowerCase();
+      cultivoNombre = (declaraciones[i].cultivo||'').toLowerCase();
       break;
     }
   }
-  // Check by name keywords
-  if(nombre.indexOf('vi')>=0 && (nombre.indexOf('a')>=0))  return '&#127815;'; // vina/via -> uva
-  if(nombre.indexOf('oliv')>=0)   return '&#129386;'; // olivo
-  if(nombre.indexOf('almend')>=0) return '&#127802;'; // almendro
-  if(nombre.indexOf('girasol')>=0) return '&#127803;'; // girasol
-  if(nombre.indexOf('maiz')>=0 || nombre.indexOf('maíz')>=0) return '&#127799;'; // maiz
-  // Check by category
-  if(cat==='vinedo')    return '&#127815;'; // uva
-  if(cat==='cereal')    return '&#127806;'; // espiga
-  if(cat==='leguminosa') return '&#129496;'; // legumbre
-  if(cat==='oleaginosa') return '&#127803;'; // girasol
-  if(cat==='barbecho')   return '&#9898;';  // circulo vacio
-  if(cat==='hortaliza')  return '&#129382;'; // brocoli
-  if(cat==='forraje')    return '&#127807;'; // planta
-  if(cat==='frutal')     return '&#127822;'; // manzana
-  // Regadio/secano fallback
-  if(p.regadio==='R') return '&#128167;'; // gota agua
-  return '&#127807;'; // planta por defecto
+
+  // PRIORIDAD 1: categoría del cultivo declarado
+  if(cat==='vinedo')    return '&#127815;';
+  if(cat==='cereal')    return '&#127806;';
+  if(cat==='leguminosa') return '&#129496;';
+  if(cat==='oleaginosa') return '&#127803;';
+  if(cat==='barbecho')   return '&#9898;';
+  if(cat==='hortaliza')  return '&#129382;';
+  if(cat==='forraje')    return '&#127807;';
+  if(cat==='frutal')     return '&#127822;';
+
+  // PRIORIDAD 2: nombre del cultivo declarado
+  if(cultivoNombre) {
+    var ico = iconoCultivo(cultivoNombre, cat);
+    if(ico) return ico;
+  }
+
+  // PRIORIDAD 3: nombre de la parcela (solo si no hay cultivo declarado)
+  var nombreNorm = nombre.replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[ñ]/g,'n').replace(/[()[\]]/g,' ');
+  if(nombreNorm.indexOf('vina')>=0 || nombreNorm.indexOf('vinedo')>=0 || nombre.indexOf('vi\u00f1')>=0) return '&#127815;';
+  if(nombreNorm.indexOf('oliv')>=0)    return '&#129386;';
+  if(nombreNorm.indexOf('almend')>=0)  return '&#127802;';
+  if(nombreNorm.indexOf('girasol')>=0) return '&#127803;';
+  if(nombreNorm.indexOf('maiz')>=0)    return '&#127799;';
+
+  // PRIORIDAD 4: regadío/secano
+  if(p.regadio==='R') return '&#128167;';
+  return '&#127807;';
 }
 
 function iconoCultivo(cultivo, categoria) {
