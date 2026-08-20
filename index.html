@@ -562,7 +562,12 @@ input[readonly]{background:var(--gris-claro);color:#888;cursor:default;}
 .preview-table th{background:var(--verde);color:white;padding:8px 10px;text-align:left;white-space:nowrap;}
 .preview-table td{padding:7px 10px;border-bottom:1px solid var(--borde);white-space:nowrap;}
 .preview-table tr:nth-child(even) td{background:var(--verde-fondo);}
-.ajuste-item{background:white;border-radius:var(--radio);margin-bottom:2px;cursor:pointer;box-shadow:var(--sombra);overflow:hidden;}
+.trabajos-filtro{padding:6px 14px;border-radius:20px;border:1.5px solid var(--borde);background:white;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--gris);}
+.trabajos-filtro.active{background:var(--verde);color:white;border-color:var(--verde);}
+.trabajo-card{background:white;border-radius:var(--radio);box-shadow:var(--sombra);padding:14px 16px;margin-bottom:10px;}
+.trabajo-fecha{font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;margin-bottom:6px;}
+.trabajo-titulo{font-size:15px;font-weight:700;color:var(--gris);margin-bottom:2px;}
+.trabajo-sub{font-size:13px;color:#888;}border-radius:var(--radio);margin-bottom:2px;cursor:pointer;box-shadow:var(--sombra);overflow:hidden;}
 .ajuste-item-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:15px;font-weight:700;color:var(--gris);}
 .ajuste-item:active{background:var(--gris-claro);}
 .ajuste-arrow{font-size:20px;color:#bbb;transition:transform 0.2s;display:inline-block;}
@@ -1112,6 +1117,25 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 </div>
 
 <!-- MAQUINARIA PAGE -->
+<div id="page-trabajos" class="page">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <div style="flex:1">
+      <input type="text" id="searchTrabajos" placeholder="Buscar parcela, tipo, producto..." oninput="renderTrabajos()" style="margin:0">
+    </div>
+  </div>
+  <!-- Filtros -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+    <button class="trabajos-filtro active" data-filtro="todos" onclick="setFiltroTrabajos('todos')">Todos</button>
+    <button class="trabajos-filtro" data-filtro="Arado" onclick="setFiltroTrabajos('Arado')">Arado</button>
+    <button class="trabajos-filtro" data-filtro="Siembra" onclick="setFiltroTrabajos('Siembra')">Siembra</button>
+    <button class="trabajos-filtro" data-filtro="Herbicida" onclick="setFiltroTrabajos('Herbicida')">Herbicida</button>
+    <button class="trabajos-filtro" data-filtro="Abonado fondo" onclick="setFiltroTrabajos('Abonado fondo')">Abonado</button>
+    <button class="trabajos-filtro" data-filtro="Cosecha" onclick="setFiltroTrabajos('Cosecha')">Cosecha</button>
+    <button class="trabajos-filtro" data-filtro="Riego" onclick="setFiltroTrabajos('Riego')">Riego</button>
+  </div>
+  <div id="listaTrabajos"></div>
+</div>
+
 <div id="page-maquinaria" class="page">
   <div id="listaMaquinaria"></div>
   <div class="card" style="margin-top:12px">
@@ -1172,6 +1196,10 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-4l2-5h9l3 4h2v5h-2"/><path d="M14 8l2 4"/></svg></span>
     Maquinaria
   </div>
+  <div class="nav-item" id="navTrabajos" onclick="showPage('trabajos')">
+    <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg></span>
+    Trabajos
+  </div>
   <div class="nav-item" onclick="showPage('importar')">
     <span><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg></span>
     Ajustes
@@ -1227,6 +1255,7 @@ setTimeout(function(){
   window.renderCampanas   = renderCampanas;
   window.renderPAC        = renderPAC;
   window.renderParcelas   = renderParcelas;
+  window.renderTrabajos   = renderTrabajos;
   window.renderSemillas   = renderSemillas;
   window.renderMaquinaria = renderMaquinaria;
 },100);
@@ -1337,6 +1366,100 @@ function hashPassword(pass) {
     .then(function(buf) {
       return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
     });
+}
+
+// ── TRABAJOS ─────────────────────────────────────────────────────
+var _filtroTrabajos = 'todos';
+
+function setFiltroTrabajos(filtro) {
+  _filtroTrabajos = filtro;
+  document.querySelectorAll('.trabajos-filtro').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-filtro') === filtro);
+  });
+  renderTrabajos();
+}
+
+function renderTrabajos() {
+  var cont = document.getElementById('listaTrabajos');
+  if (!cont) return;
+
+  var laboreos = DB.get(uk('laboreos'), []);
+  var busq = (document.getElementById('searchTrabajos').value || '').toLowerCase().trim();
+
+  // Filtrar
+  var lista = laboreos.filter(function(lb) {
+    if (lb.autoGenerado) return false;
+    if (_filtroTrabajos !== 'todos' && lb.tipo !== _filtroTrabajos) return false;
+    if (busq) {
+      var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
+      var pNombre = p ? p.nombre.toLowerCase() : '';
+      var texto = (lb.tipo + ' ' + (lb.producto||'') + ' ' + pNombre + ' ' + (lb._autor||'')).toLowerCase();
+      if (texto.indexOf(busq) === -1) return false;
+    }
+    return true;
+  });
+
+  // Ordenar por fecha descendente
+  lista.sort(function(a, b) {
+    var fa = a.fecha || '0000-00-00';
+    var fb = b.fecha || '0000-00-00';
+    return fb.localeCompare(fa);
+  });
+
+  if (!lista.length) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">&#x1F4CB;</div><div class="empty-text">Sin trabajos registrados</div></div>';
+    return;
+  }
+
+  var iconos = {
+    'Herbicida':'\uD83C\uDF3F','Fungicida':'\uD83C\uDF44','Insecticida':'\uD83D\uDC1B',
+    'Siembra':'\uD83C\uDF31','Abonado fondo':'\uD83D\uDCE6','Abonado cobertera':'\uD83D\uDCE6',
+    'Fertirrigacion':'\uD83D\uDCA7','Riego':'\uD83D\uDCA7',
+    'Cosecha':'\uD83C\uDF3E','Arado':'\uD83D\uDE9C','Cultivado':'\uD83D\uDE9C',
+    'Rodillo':'\uD83D\uDD18','Otro':'\uD83D\uDD27'
+  };
+
+  var html = '';
+  var mesActual = '';
+
+  lista.forEach(function(lb) {
+    var p = parcelas.find(function(x){ return x.id === lb.parcelaId; });
+    var pNombre = p ? p.nombre : 'Parcela desconocida';
+    var fecha = lb.fecha || '';
+    var icono = iconos[lb.tipo] || '\uD83D\uDD27';
+
+    // Separador de mes
+    if (fecha) {
+      var parts = fecha.split('-');
+      var mes = parts.length >= 2 ? parts[0] + '-' + parts[1] : '';
+      if (mes !== mesActual) {
+        mesActual = mes;
+        var meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        var mNum = parseInt(parts[1]) || 0;
+        html += '<div style="font-size:11px;font-weight:700;color:#aaa;letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase">' + meses[mNum] + ' ' + parts[0] + '</div>';
+      }
+    }
+
+    html += '<div class="trabajo-card">' +
+      '<div style="display:flex;align-items:flex-start;gap:12px">' +
+      '<div style="font-size:24px;width:36px;text-align:center;flex-shrink:0;margin-top:2px">' + icono + '</div>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div class="trabajo-titulo">' + lb.tipo + (lb.producto ? ' \u2014 ' + lb.producto : '') + '</div>' +
+      '<div class="trabajo-sub">' + pNombre + '</div>' +
+      (lb.dosis ? '<div class="trabajo-sub">Dosis: ' + lb.dosis + '</div>' : '') +
+      (lb.maquinaria ? '<div class="trabajo-sub">\uD83D\uDE9C ' + lb.maquinaria + '</div>' : '') +
+      (lb._autor ? '<div class="trabajo-sub" style="color:#aaa">\uD83D\uDC64 ' + lb._autor + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--verde)">' + (fecha ? fecha.split('-').reverse().join('/') : '') + '</div>' +
+      '<div style="font-size:11px;color:#aaa">' + (lb.campana || '') + '</div>' +
+      '</div>' +
+      '</div>' +
+      (lb.notas ? '<div style="margin-top:8px;font-size:12px;color:#888;border-top:1px solid var(--borde);padding-top:8px">' + lb.notas + '</div>' : '') +
+      '</div>';
+  });
+
+  cont.innerHTML = html;
 }
 
 function toggleAjuste(id, loadData) {
@@ -1543,10 +1666,11 @@ function entrarApp(u) {
 
 function _aplicarPermisos() {
   var navItems = document.querySelectorAll('#appNav .nav-item');
+  // Nav: 0=Campañas, 1=Campos, 2=Semillas, 3=Maquinaria, 4=Trabajos, 5=Ajustes
   if (rolActual === 'worker') {
-    if (navItems[2]) navItems[2].style.display = 'none';
-    if (navItems[3]) navItems[3].style.display = 'none';
-    if (navItems[4]) navItems[4].style.display = 'none';
+    if (navItems[2]) navItems[2].style.display = 'none'; // Semillas
+    if (navItems[3]) navItems[3].style.display = 'none'; // Maquinaria
+    if (navItems[5]) navItems[5].style.display = 'none'; // Ajustes
     if (!document.getElementById('workerCSS')) {
       var style = document.createElement('style');
       style.id = 'workerCSS';
@@ -1923,6 +2047,7 @@ function showPage(name) {
   document.getElementById('fabBtn').classList.toggle('hidden', name !== 'parcelas');
   if(name==='pac')        { renderPAC(); }
   if(name==='parcelas')   renderParcelas();
+  if(name==='trabajos')   renderTrabajos();
   if(name==='semillas')   renderSemillas();
   if(name==='maquinaria') renderMaquinaria();
 }
