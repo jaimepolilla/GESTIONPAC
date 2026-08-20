@@ -793,6 +793,17 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <button id="btnRestaurarAjustes" style="width:100%;padding:13px;background:#f2f2f2;color:var(--gris);border:1.5px solid var(--borde);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128194; Restaurar desde .json</button>
   </div>
 
+  <!-- GESTIÓN PARCELAS -->
+  <div class="ajuste-item" onclick="toggleAjuste('ajuste-parcelas')">
+    <div class="ajuste-item-header">
+      <span>&#128205; Gesti&#243;n de parcelas</span><span class="ajuste-arrow" id="arrow-ajuste-parcelas">&#8250;</span>
+    </div>
+  </div>
+  <div class="ajuste-body" id="ajuste-parcelas">
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina todas las parcelas y sus datos asociados (cultivos, laboreos). Esta acción no se puede deshacer.</div>
+    <button onclick="eliminarTodasParcelas()" style="width:100%;padding:12px;background:#fdf0ef;color:var(--rojo);border:1.5px solid #f5c6c2;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128465; Eliminar todas las parcelas</button>
+  </div>
+
   <!-- CAMPAÑAS -->
   <div class="ajuste-item" onclick="toggleAjuste('ajuste-campanas',true)">
     <div class="ajuste-item-header">
@@ -1466,6 +1477,24 @@ function renderTrabajos() {
   });
 
   cont.innerHTML = html;
+}
+
+function eliminarTodasParcelas() {
+  mostrarConfirmacion(
+    'Eliminar todas las parcelas',
+    'Se borrar\u00e1n todas las parcelas, cultivos y laboreos. \u00bfEst\u00e1s seguro?',
+    function() {
+      parcelas = [];
+      declaraciones = [];
+      DB.set(uk('parcelas'), []);
+      DB.set(uk('declaraciones'), []);
+      DB.set(uk('laboreos'), []);
+      save();
+      toast('Todas las parcelas eliminadas');
+      renderPAC();
+      renderParcelas();
+    }
+  );
 }
 
 function toggleAjuste(id, loadData) {
