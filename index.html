@@ -719,12 +719,13 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
   <div class="header-avatar" id="headerAvatar" onclick="abrirPerfil()">?</div>
   <div style="display:flex;align-items:center;gap:8px"><div style="font-size:26px;line-height:1">&#127806;</div><div style="line-height:1.1"><div style="font-size:11px;font-weight:600;opacity:0.85;letter-spacing:0.5px">Gesti&#243;n</div><div style="font-size:20px;font-weight:800;letter-spacing:-0.5px">PAC</div><small id="headerCampana" style="font-size:10px;opacity:0.75"></small></div></div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-    <!-- Campana de notificaciones -->
-    <div id="btnNotificaciones" onclick="abrirNotificaciones()" style="display:none;position:relative;cursor:pointer;width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px">
-      &#128276;
-      <span id="badgeNotif" style="display:none;position:absolute;top:0;right:0;background:#e74c3c;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center"></span>
+    <!-- Campana permanente -->
+    <div id="btnNotificaciones" onclick="abrirNotificaciones()" style="position:relative;cursor:pointer;width:38px;height:38px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span id="badgeNotif" style="display:none;position:absolute;top:1px;right:1px;background:#e74c3c;color:white;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;line-height:16px;text-align:center"></span>
     </div>
-    <div id="syncStatus" style="font-size:12px;display:flex;align-items:center;gap:3px">&#9898; <span style="font-size:10px;color:rgba(255,255,255,0.75)">Local</span></div>
+    <!-- Sync oculto — solo se usa internamente -->
+    <div id="syncStatus" style="display:none"></div>
   </div>
   <input type="file" id="fileInputRestore" accept=".json" style="display:none" onchange="restaurarCopia(event)">
 </header>
@@ -1767,18 +1768,31 @@ function calcularNotificaciones(callback) {
 
 function actualizarBadge() {
   calcularNotificaciones(function(nuevos) {
-    var btn = document.getElementById('btnNotificaciones');
     var badge = document.getElementById('badgeNotif');
-    if (!btn) return;
-    if (nuevos.length > 0) {
-      btn.style.display = 'flex';
-      badge.style.display = 'flex';
-      badge.textContent = nuevos.length > 9 ? '9+' : nuevos.length;
+    if (!badge) return;
+    // Contar también alertas pendientes
+    var totalAlertas = _contarAlertasPendientes();
+    var total = nuevos.length + totalAlertas;
+    if (total > 0) {
+      badge.style.display = 'block';
+      badge.textContent = total > 9 ? '9+' : total;
     } else {
-      btn.style.display = 'none';
       badge.style.display = 'none';
     }
   });
+}
+
+function _contarAlertasPendientes() {
+  // Contar parcelas con alerta de rotación pendiente
+  try {
+    var count = 0;
+    var alertas = DB.get(uk('alertas'), []);
+    var hoy = new Date().toISOString().slice(0, 10);
+    alertas.forEach(function(a) {
+      if (a.fecha && a.fecha <= hoy && !a.leida) count++;
+    });
+    return count;
+  } catch(e) { return 0; }
 }
 
 function abrirNotificaciones() {
@@ -1811,15 +1825,12 @@ function abrirNotificaciones() {
 
 function cerrarNotificaciones() {
   document.getElementById('modalNotificaciones').classList.remove('open');
-  // Marcar como leídas al cerrar
+  // Marcar trabajos como leídos
   var ahora = Date.now();
   _LS.set('pac_ultimo_acceso_' + usuarioActual.id, ahora);
   _guardarUltimoAcceso(ahora);
-  // Ocultar badge
-  var btn = document.getElementById('btnNotificaciones');
-  var badge = document.getElementById('badgeNotif');
-  if (btn) btn.style.display = 'none';
-  if (badge) badge.style.display = 'none';
+  // Actualizar badge
+  actualizarBadge();
 }
 
 function verParcela(parcelaId) {
