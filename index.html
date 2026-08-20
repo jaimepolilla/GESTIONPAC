@@ -1072,10 +1072,17 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     </div>
     <input type="hidden" id="laboreoParcelaId">
     <input type="hidden" id="laboreoLineaId">
+    <!-- Parcela única (cuando se abre desde una parcela) -->
     <div id="laboreoParcelaInfo" style="background:var(--verde-fondo);border-radius:10px;padding:12px 14px;margin-bottom:14px">
       <div style="font-size:13px;color:#888">Campo</div>
       <div id="laboreoParcelaNombre" style="font-size:17px;font-weight:700"></div>
       <div id="laboreoParcelaMeta" style="font-size:12px;color:#888;margin-top:2px"></div>
+    </div>
+    <!-- Selector múltiple de parcelas (cuando se abre desde Trabajos) -->
+    <div id="laboreoMultiParcelasDiv" style="display:none;margin-bottom:14px">
+      <label>Aplicar a estas parcelas *</label>
+      <div style="font-size:12px;color:#888;margin-bottom:8px">Selecciona una o varias parcelas</div>
+      <div id="laboreoMultiParcelas" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--borde);border-radius:10px;padding:4px"></div>
     </div>
     <label>Tipo de labor *</label>
     <select id="laboreoTipo">
@@ -1135,6 +1142,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <div style="flex:1">
       <input type="text" id="searchTrabajos" placeholder="Buscar parcela, tipo, producto..." oninput="renderTrabajos()" style="margin:0">
     </div>
+    <button onclick="abrirModalLaboreoMulti()" style="background:var(--verde);color:white;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">+ A&#241;adir</button>
   </div>
   <!-- Filtros -->
   <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
@@ -3221,6 +3229,29 @@ function anadirFert() {
   renderFertList();
 }
 
+function abrirModalLaboreoMulti() {
+  // Modo multi-parcela: ocultar info de parcela única, mostrar selector múltiple
+  document.getElementById('laboreoParcelaId').value = '';
+  document.getElementById('laboreoLineaId').value = '';
+  document.getElementById('laboreoParcelaInfo').style.display = 'none';
+  document.getElementById('laboreoMultiParcelasDiv').style.display = '';
+
+  // Renderizar checkboxes de parcelas
+  var cont = document.getElementById('laboreoMultiParcelas');
+  cont.innerHTML = '';
+  parcelas.forEach(function(p) {
+    var item = document.createElement('label');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--borde);';
+    item.innerHTML = '<input type="checkbox" class="multi-parcela-check" data-id="' + p.id + '" style="width:18px;height:18px;cursor:pointer">' +
+      '<div><div style="font-weight:700;font-size:14px">' + p.nombre + '</div>' +
+      '<div style="font-size:12px;color:#888">' + (p.municipio||'') + (p.superficie?' · '+p.superficie+' ha':'') + '</div></div>';
+    cont.appendChild(item);
+  });
+
+  _prepararModalLaboreo(false);
+  document.getElementById('modalLaboreo').classList.add('open');
+}
+
 function abrirModalLaboreo(parcelaId, lineaId) {
   var p=null; for(var i=0;i<parcelas.length;i++){if(parcelas[i].id===parcelaId){p=parcelas[i];break;}}
   if(!p) return;
@@ -3228,6 +3259,9 @@ function abrirModalLaboreo(parcelaId, lineaId) {
   document.getElementById('laboreoLineaId').value=lineaId||'';
   document.getElementById('laboreoParcelaNombre').textContent=p.nombre;
   document.getElementById('laboreoParcelaMeta').textContent=(p.municipio||'')+(p.superficie?' | '+p.superficie+' ha':'');
+  document.getElementById('laboreoParcelaInfo').style.display = '';
+  document.getElementById('laboreoMultiParcelasDiv').style.display = 'none';
+
   var maquinaria=DB.get(uk('maquinaria'),[]);
   var selMaq=document.getElementById('laboreoMaquinaria');
   selMaq.innerHTML='<option value="">-- Sin especificar --</option>';
@@ -3249,13 +3283,29 @@ function abrirModalLaboreo(parcelaId, lineaId) {
     document.getElementById('laboreoTipoSiembra').value='';
     document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
   }
-  document.getElementById('btnGuardarLaboreo').onclick=guardarLaboreo;
-  document.getElementById('btnCancelarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnCerrarLaboreo').onclick=function(){cerrarModal('modalLaboreo');};
-  document.getElementById('btnVolverPACLaboreo').onclick=function(){cerrarModal('modalLaboreo');showPage('pac');};
-  // Tipos que NO necesitan producto
-  var TIPOS_SIN_PRODUCTO = ['Arado','Cultivado','Cosecha','Riego'];
+  _prepararModalLaboreo(true);
+  document.getElementById('modalLaboreo').classList.add('open');
+}
 
+function _prepararModalLaboreo(esSingle) {
+  var maquinaria=DB.get(uk('maquinaria'),[]);
+  var selMaq=document.getElementById('laboreoMaquinaria');
+  selMaq.innerHTML='<option value="">-- Sin especificar --</option>';
+  for(var i=0;i<maquinaria.length;i++) selMaq.innerHTML+='<option value="'+maquinaria[i].nombre+'">'+maquinaria[i].nombre+'</option>';
+
+  if (!esSingle) {
+    ['laboreoTipo','laboreoProducto','laboreoDosis','laboreoFecha','laboreoNotas'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('laboreoMaquinaria').value='';
+    document.getElementById('laboreoTipoSiembra').value='';
+    document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
+  }
+
+  document.getElementById('btnGuardarLaboreo').onclick = guardarLaboreo;
+  document.getElementById('btnCancelarLaboreo').onclick = function(){cerrarModal('modalLaboreo');};
+  document.getElementById('btnCerrarLaboreo').onclick = function(){cerrarModal('modalLaboreo');};
+  document.getElementById('btnVolverPACLaboreo').onclick = function(){cerrarModal('modalLaboreo');showPage('pac');};
+
+  var TIPOS_SIN_PRODUCTO = ['Arado','Cultivado','Cosecha','Riego'];
   function toggleTipoSiembra() {
     var tipo = document.getElementById('laboreoTipo').value;
     var div  = document.getElementById('laboreoTipoSiembraDiv');
@@ -3263,12 +3313,11 @@ function abrirModalLaboreo(parcelaId, lineaId) {
     if(div) div.style.display = tipo==='Siembra' ? '' : 'none';
     if(prodDiv) prodDiv.style.display = TIPOS_SIN_PRODUCTO.indexOf(tipo) !== -1 ? 'none' : '';
     if(tipo!=='Siembra') { document.getElementById('laboreoTipoSiembra').value=''; document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');}); }
-    // Limpiar producto si no aplica
     if(TIPOS_SIN_PRODUCTO.indexOf(tipo) !== -1) document.getElementById('laboreoProducto').value = '';
   }
   document.getElementById('laboreoTipo').onchange = toggleTipoSiembra;
   toggleTipoSiembra();
-  // Bind tipo siembra buttons - scoped to modalCultivo
+
   document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(btn){
     btn.onclick = function(){
       document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
@@ -3276,7 +3325,6 @@ function abrirModalLaboreo(parcelaId, lineaId) {
       document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
     };
   });
-  // Bind laboreo siembra buttons
   document.querySelectorAll('.laboreo-siembra-btn').forEach(function(btn){
     btn.onclick = function(){
       document.querySelectorAll('.laboreo-siembra-btn').forEach(function(b){b.classList.remove('activo');});
@@ -3284,28 +3332,60 @@ function abrirModalLaboreo(parcelaId, lineaId) {
       document.getElementById('laboreoTipoSiembra').value = this.getAttribute('data-val');
     };
   });
-  document.getElementById('modalLaboreo').classList.add('open');
 }
 
 function guardarLaboreo() {
-  var parcelaId=document.getElementById('laboreoParcelaId').value;
-  var lineaId=document.getElementById('laboreoLineaId').value;
-  var tipo=document.getElementById('laboreoTipo').value;
-  var producto=document.getElementById('laboreoProducto').value.trim();
-  var fecha=document.getElementById('laboreoFecha').value;
-  var tipoSiembra=document.getElementById('laboreoTipoSiembra').value;
+  var parcelaId = document.getElementById('laboreoParcelaId').value;
+  var lineaId   = document.getElementById('laboreoLineaId').value;
+  var tipo      = document.getElementById('laboreoTipo').value;
+  var producto  = document.getElementById('laboreoProducto').value.trim();
+  var fecha     = document.getElementById('laboreoFecha').value;
+  var tipoSiembra = document.getElementById('laboreoTipoSiembra').value;
   var tiposSinProducto = ['Arado','Cultivado','Cosecha','Riego'];
-  if(!tipo){toast('Selecciona el tipo de labor',true);return;}
-  if(tipo==='Siembra'&&!tipoSiembra){toast('Selecciona Directa o Tradicional',true);return;}
-  if(tiposSinProducto.indexOf(tipo)===-1 && !producto){toast('Indica el producto',true);return;}
-  if(!fecha){toast('Indica la fecha',true);return;}
-  var laboreos=DB.get(uk('laboreos'),[]);
-  var obj={
+
+  if(!tipo)  { toast('Selecciona el tipo de labor',true); return; }
+  if(tipo==='Siembra' && !tipoSiembra) { toast('Selecciona Directa o Tradicional',true); return; }
+  if(tiposSinProducto.indexOf(tipo)===-1 && !producto) { toast('Indica el producto',true); return; }
+  if(!fecha) { toast('Indica la fecha',true); return; }
+
+  // Modo multi-parcela (desde pestaña Trabajos)
+  var multiDiv = document.getElementById('laboreoMultiParcelasDiv');
+  if (multiDiv && multiDiv.style.display !== 'none') {
+    var checks = document.querySelectorAll('.multi-parcela-check:checked');
+    if (!checks.length) { toast('Selecciona al menos una parcela',true); return; }
+    var laboreos = DB.get(uk('laboreos'),[]);
+    var count = 0;
+    checks.forEach(function(chk) {
+      var pId = chk.getAttribute('data-id');
+      laboreos.push({
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+        parcelaId: pId,
+        campana: campanaActual,
+        tipo: tipo, producto: producto,
+        dosis: document.getElementById('laboreoDosis').value.trim(),
+        fecha: fecha,
+        maquinaria: document.getElementById('laboreoMaquinaria').value,
+        notas: document.getElementById('laboreoNotas').value.trim(),
+        _ts: Date.now(),
+        _autor: usuarioActual ? usuarioActual.nombre : ''
+      });
+      count++;
+    });
+    DB.set(uk('laboreos'), laboreos);
+    save();
+    cerrarModal('modalLaboreo');
+    renderTrabajos();
+    toast('Laboreo aplicado a ' + count + ' parcela' + (count>1?'s':''));
+    return;
+  }
+
+  // Modo parcela única
+  var laboreos = DB.get(uk('laboreos'),[]);
+  var obj = {
     id: lineaId||(Date.now().toString()+Math.random().toString(36).slice(2)),
     parcelaId: parcelaId,
     campana: campanaActual,
-    tipo: tipo,
-    producto: producto,
+    tipo: tipo, producto: producto,
     dosis: document.getElementById('laboreoDosis').value.trim(),
     fecha: fecha,
     maquinaria: document.getElementById('laboreoMaquinaria').value,
