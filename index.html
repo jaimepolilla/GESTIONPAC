@@ -567,7 +567,8 @@ input[readonly]{background:var(--gris-claro);color:#888;cursor:default;}
 .trabajo-card{background:white;border-radius:var(--radio);box-shadow:var(--sombra);padding:14px 16px;margin-bottom:10px;}
 .trabajo-fecha{font-size:11px;color:#aaa;font-weight:600;letter-spacing:0.5px;margin-bottom:6px;}
 .trabajo-titulo{font-size:15px;font-weight:700;color:var(--gris);margin-bottom:2px;}
-.trabajo-sub{font-size:13px;color:#888;}border-radius:var(--radio);margin-bottom:2px;cursor:pointer;box-shadow:var(--sombra);overflow:hidden;}
+.trabajo-sub{font-size:13px;color:#888;}
+.ajuste-item{background:white;border-radius:var(--radio);margin-bottom:2px;cursor:pointer;box-shadow:var(--sombra);overflow:hidden;}
 .ajuste-item-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:15px;font-weight:700;color:var(--gris);}
 .ajuste-item:active{background:var(--gris-claro);}
 .ajuste-arrow{font-size:20px;color:#bbb;transition:transform 0.2s;display:inline-block;}
@@ -1292,12 +1293,7 @@ save._timer = null;
 // Payload completo para Firestore (incluye maquinaria y laboreos)
 window._buildPayload = function() {
   if (!usuarioActual) return null;
-  return {
-    _nombre:         (usuarioActual.nombre||'').toLowerCase().trim(),
-    _nombre_display: usuarioActual.nombre||'',
-    _colorIdx:       usuarioActual.colorIdx||0,
-    _email:          usuarioActual._email || null,
-    _passHash:       usuarioActual._passHash || _LS.get('pac_passHash_' + usuarioActual.id, null) || null,
+  var payload = {
     _ts:             Date.now(),
     _foto:           usuarioActual.foto || _LS.get('pac_foto_' + usuarioActual.id, null) || null,
     campanaActual:   campanaActual,
@@ -1308,6 +1304,15 @@ window._buildPayload = function() {
     maquinaria:      DB.get(uk('maquinaria'), []),
     laboreos:        DB.get(uk('laboreos'),   [])
   };
+  // Solo el propietario actualiza sus campos de identidad
+  if (rolActual !== 'worker') {
+    payload._nombre         = (usuarioActual.nombre||'').toLowerCase().trim();
+    payload._nombre_display = usuarioActual.nombre||'';
+    payload._colorIdx       = usuarioActual.colorIdx||0;
+    payload._email          = usuarioActual._email || null;
+    payload._passHash       = usuarioActual._passHash || _LS.get('pac_passHash_' + usuarioActual.id, null) || null;
+  }
+  return payload;
 };
 
 function restaurarCopiaLogin(event) {
