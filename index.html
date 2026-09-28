@@ -599,6 +599,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
 .tipo-siembra-btn{flex:1;padding:14px 10px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:all 0.2s;}
 .tipo-siembra-btn.activo,.laboreo-siembra-btn.activo{background:var(--verde)!important;border-color:var(--verde)!important;color:white!important;}
 .tipo-siembra-btn:active,.laboreo-siembra-btn:active{opacity:0.8;}
+.cat-semilla-btn.activo{background:var(--azul)!important;border-color:var(--azul)!important;color:white!important;}
 .laboreo-siembra-btn{flex:1;padding:14px 10px;border:2px solid var(--borde);border-radius:10px;background:var(--blanco);font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:all 0.2s;}
 .maq-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--borde);}
 .maq-item:last-child{border-bottom:none;}
@@ -1040,6 +1041,14 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <datalist id="cultivosSuggestions"></datalist>
     <label>Semilla / Variedad</label>
     <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    <label>Categoría de semilla</label>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button type="button" class="cat-semilla-btn" data-val="" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:600;color:#888">Sin especificar</button>
+      <button type="button" class="cat-semilla-btn" data-val="R1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#2471a3">R1</button>
+      <button type="button" class="cat-semilla-btn" data-val="R2" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#8e44ad">R2</button>
+      <button type="button" class="cat-semilla-btn" data-val="C1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#27ae60">C1</button>
+    </div>
+    <input type="hidden" id="cultivoCatSemilla" value="">
     <label>Tipo de siembra *</label>
     <div style="display:flex;gap:10px;margin-bottom:4px">
       <button type="button" class="tipo-siembra-btn" id="btnSiembraDirecta" data-val="directa">D - Directa</button>
@@ -2426,7 +2435,40 @@ function renderPAC() {
     }
   }
   statsHtml += '</div>';
-  if(statsCont) statsCont.innerHTML = statsHtml;
+
+  // ── STATS: categoría de semilla (R1/R2/C1) ───────────────────
+  var semMap = {};
+  for(var i=0;i<declaraciones.length;i++){
+    var d = declaraciones[i];
+    if(d.campana !== campanaActual) continue;
+    if(!d.catSemilla) continue;
+    if(!semMap[d.catSemilla]) semMap[d.catSemilla] = 0;
+    semMap[d.catSemilla] += parseFloat(d.superficie)||0;
+  }
+  var semKeys = Object.keys(semMap).sort();
+  var semHtml = '';
+  if(semKeys.length) {
+    var semColores = {'R1':'#2471a3','R2':'#8e44ad','C1':'#27ae60'};
+    semHtml = '<div class="card" style="padding:16px;margin-bottom:12px">';
+    semHtml += '<div style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Categor\u00eda de semilla</div>';
+    semKeys.forEach(function(cat) {
+      var ha = semMap[cat];
+      var pct = haTotal>0 ? (ha/haTotal*100) : 0;
+      var color = semColores[cat]||'#555';
+      semHtml += '<div style="margin-bottom:12px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">' +
+        '<span style="font-size:16px;font-weight:700;color:var(--gris)">' + cat + '</span>' +
+        '<span style="font-size:18px;font-weight:800;color:'+color+'">' + ha.toFixed(2) + ' ha &nbsp; <span style=\"font-size:13px;font-weight:600;color:#aaa\">' + pct.toFixed(1) + '%</span></span>' +
+        '</div>' +
+        '<div style="height:10px;background:var(--gris-claro);border-radius:5px;overflow:hidden;margin-bottom:4px">' +
+        '<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+color+';border-radius:5px"></div>' +
+        '</div>' +
+        '</div>';
+    });
+    semHtml += '</div>';
+  }
+
+  if(statsCont) statsCont.innerHTML = statsHtml + semHtml;
 
   // ── PARCELAS LIST ─────────────────────────────────────────────
   var q = document.getElementById('searchPAC').value.toLowerCase();
@@ -2573,10 +2615,18 @@ function abrirModalCultivo(parcelaId, lineaId) {
       document.getElementById('cultivoSuperficie').value=d.superficie||'';
       document.getElementById('cultivoFechaSiembra').value=d.fechaSiembra||'';
       document.getElementById('cultivoNotas').value=d.notas||'';
+      // Cargar categoría semilla
+      var catSem = d.catSemilla||'';
+      document.getElementById('cultivoCatSemilla').value=catSem;
+      document.getElementById('modalCultivo').querySelectorAll('.cat-semilla-btn').forEach(function(b){
+        b.classList.toggle('activo', b.getAttribute('data-val')===catSem);
+      });
     }
   } else {
     document.getElementById('cultivoTipoSiembra').value='';
+    document.getElementById('cultivoCatSemilla').value='';
     document.getElementById('modalCultivo').querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
+    document.getElementById('modalCultivo').querySelectorAll('.cat-semilla-btn').forEach(function(b){ b.classList.remove('activo'); });
     document.getElementById('cultivoCultivo').value='';
     document.getElementById('cultivoSemilla').value='';
     document.getElementById('cultivoSuperficie').value='';
@@ -2598,6 +2648,14 @@ function abrirModalCultivo(parcelaId, lineaId) {
       _modalC.querySelectorAll('.tipo-siembra-btn').forEach(function(b){ b.classList.remove('activo'); });
       this.classList.add('activo');
       document.getElementById('cultivoTipoSiembra').value = this.getAttribute('data-val');
+    };
+  });
+  // Bind categoría semilla buttons (R1/R2/C1)
+  _modalC.querySelectorAll('.cat-semilla-btn').forEach(function(btn){
+    btn.onclick = function(){
+      _modalC.querySelectorAll('.cat-semilla-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('cultivoCatSemilla').value = this.getAttribute('data-val');
     };
   });
   document.getElementById('modalCultivo').classList.add('open');
@@ -2654,6 +2712,7 @@ function guardarLineaCultivo() {
     parcelaId: parcelaId, campana: campanaActual, cultivo: cultivo,
     categoria:   document.getElementById('cultivoCategoria') ? document.getElementById('cultivoCategoria').value : '',
     semilla:     document.getElementById('cultivoSemilla').value,
+    catSemilla:  document.getElementById('cultivoCatSemilla') ? document.getElementById('cultivoCatSemilla').value : '',
     tipoSiembra: document.getElementById('cultivoTipoSiembra') ? document.getElementById('cultivoTipoSiembra').value : '',
     superficie: superficie,
     fechaSiembra: document.getElementById('cultivoFechaSiembra').value,
@@ -2829,24 +2888,55 @@ function abrirSIGPAC(parcelaId) {
 var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
 function renderSemillas() {
   var cont=document.getElementById('listaSemillas');
-  if(!semillas.length){cont.innerHTML='<div style="text-align:center;padding:20px;color:#aaa">Sin semillas anadidas</div>';return;}
+  if(!semillas.length){cont.innerHTML='<div style="text-align:center;padding:20px;color:#aaa">Sin semillas a\u00f1adidas</div>';return;}
   var html='';
   for(var i=0;i<semillas.length;i++){
     var s=semillas[i];
-    html+='<div class="semilla-item"><div class="semilla-icon">&#127807;</div><div><div class="semilla-name">'+s.nombre+'</div><div class="semilla-sub">'+(s.tipo||'')+(s.variedad?' - '+s.variedad:'')+'</div></div><button class="semilla-del" onclick="eliminarSemilla('+s.id+')">X</button></div>';
+    html+='<div class="semilla-item">' +
+      '<div class="semilla-icon">&#127807;</div>' +
+      '<div style="flex:1;min-width:0"><div class="semilla-name">'+s.nombre+'</div>' +
+      '<div class="semilla-sub">'+(s.tipo||'')+(s.variedad?' \u2014 '+s.variedad:'')+'</div></div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<button class="sem-btn-edit" data-id="'+s.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;font-weight:700;">&#9998;</button>' +
+      '<button class="sem-btn-del" data-id="'+s.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;font-weight:700;">\u2715</button>' +
+      '</div></div>';
   }
   cont.innerHTML=html;
+  cont.querySelectorAll('.sem-btn-edit').forEach(function(btn){
+    btn.addEventListener('click',function(){ editarSemilla(this.getAttribute('data-id')); });
+  });
+  cont.querySelectorAll('.sem-btn-del').forEach(function(btn){
+    btn.addEventListener('click',function(){ eliminarSemilla(this.getAttribute('data-id')); });
+  });
 }
 
 function agregarSemilla() {
-  var nombre=document.getElementById('nuevaSemillaNombre').value.trim();
+  var nombre   = document.getElementById('nuevaSemillaNombre').value.trim();
+  var tipo     = document.getElementById('nuevaSemillaTipo').value.trim();
+  var variedad = document.getElementById('nuevaSemillaVariedad').value.trim();
+  var btn      = document.getElementById('btnAgregarSemilla');
+  var editId   = btn ? btn.getAttribute('data-editando') : null;
+
   if(!nombre){toast('El nombre es obligatorio',true);return;}
-  for(var i=0;i<semillas.length;i++){if(semillas[i].nombre.toLowerCase()===nombre.toLowerCase()){toast('Semilla ya existe',true);return;}}
-  semillas.push({id:Date.now(),nombre:nombre,tipo:document.getElementById('nuevaSemillaTipo').value.trim(),variedad:document.getElementById('nuevaSemillaVariedad').value.trim()});
+
+  if(editId) {
+    // Modo edición
+    var idx = semillas.findIndex(function(s){ return String(s.id)===String(editId); });
+    if(idx!==-1){ semillas[idx].nombre=nombre; semillas[idx].tipo=tipo; semillas[idx].variedad=variedad; }
+    if(btn){ btn.textContent='+ A\u00f1adir semilla'; btn.removeAttribute('data-editando'); btn.onclick=agregarSemilla; }
+    // Quitar botón cancelar si existe
+    var cancelBtn = document.getElementById('btnCancelarEditSemilla');
+    if(cancelBtn) cancelBtn.remove();
+    save(); renderSemillas(); toast('Semilla actualizada \u2714');
+  } else {
+    // Modo añadir
+    for(var i=0;i<semillas.length;i++){if(semillas[i].nombre.toLowerCase()===nombre.toLowerCase()){toast('Semilla ya existe',true);return;}}
+    semillas.push({id:Date.now(),nombre:nombre,tipo:tipo,variedad:variedad});
+    save(); renderSemillas(); toast('Semilla a\u00f1adida \u2714');
+  }
   document.getElementById('nuevaSemillaNombre').value='';
   document.getElementById('nuevaSemillaTipo').value='';
   document.getElementById('nuevaSemillaVariedad').value='';
-  save();renderSemillas();toast('Semilla anadida');
 }
 
 function eliminarSemilla(id) {
@@ -3889,14 +3979,30 @@ function mostrarAlertas() {
 
 // ── EDITAR SEMILLA ───────────────────────────────────────────────
 function editarSemilla(id) {
-  id=String(id);
-  var s=semillas.find(function(x){return String(x.id)===id;});
+  id = String(id);
+  var s = semillas.find(function(x){ return String(x.id)===id; });
   if(!s) return;
-  document.getElementById('nuevaSemillaNombre').value=s.nombre||'';
-  document.getElementById('nuevaSemillaTipo').value=s.tipo||'';
-  document.getElementById('nuevaSemillaVariedad').value=s.variedad||'';
-  var btn=document.getElementById('btnAgregarSemilla');
-  if(btn){btn.textContent='\u2714 Guardar cambios';btn.setAttribute('data-editando',id);btn.onclick=function(){agregarSemilla();};}
+  document.getElementById('nuevaSemillaNombre').value = s.nombre||'';
+  document.getElementById('nuevaSemillaTipo').value   = s.tipo||'';
+  document.getElementById('nuevaSemillaVariedad').value = s.variedad||'';
+  var btn = document.getElementById('btnAgregarSemilla');
+  if(btn){ btn.textContent='\u2714 Guardar cambios'; btn.setAttribute('data-editando',id); btn.onclick=agregarSemilla; }
+  // Botón cancelar
+  if(!document.getElementById('btnCancelarEditSemilla')) {
+    var cancelBtn = document.createElement('button');
+    cancelBtn.id = 'btnCancelarEditSemilla';
+    cancelBtn.className = 'btn-secondary';
+    cancelBtn.style.marginTop = '6px';
+    cancelBtn.textContent = 'Cancelar edici\u00f3n';
+    cancelBtn.onclick = function() {
+      document.getElementById('nuevaSemillaNombre').value='';
+      document.getElementById('nuevaSemillaTipo').value='';
+      document.getElementById('nuevaSemillaVariedad').value='';
+      if(btn){ btn.textContent='+ A\u00f1adir semilla'; btn.removeAttribute('data-editando'); btn.onclick=agregarSemilla; }
+      cancelBtn.remove();
+    };
+    if(btn) btn.parentNode.insertBefore(cancelBtn, btn.nextSibling);
+  }
   document.getElementById('nuevaSemillaNombre').scrollIntoView({behavior:'smooth',block:'center'});
   document.getElementById('nuevaSemillaNombre').focus();
 }
