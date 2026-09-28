@@ -827,7 +827,15 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       <input type="text" id="nuevaSemillaTipo" placeholder="Tipo">
       <input type="text" id="nuevaSemillaVariedad" placeholder="Variedad">
     </div>
-    <button class="btn-primary" style="margin-top:12px" onclick="agregarSemilla()">+ Anadir semilla</button>
+    <label style="margin-top:10px;display:block">Categoría</label>
+    <div style="display:flex;gap:8px;margin-top:6px;margin-bottom:4px">
+      <button type="button" class="cat-semilla-btn" data-val="" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:12px;font-weight:600;color:#888">Sin cat.</button>
+      <button type="button" class="cat-semilla-btn" data-val="R1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#2471a3">R1</button>
+      <button type="button" class="cat-semilla-btn" data-val="R2" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#8e44ad">R2</button>
+      <button type="button" class="cat-semilla-btn" data-val="C1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#27ae60">C1</button>
+    </div>
+    <input type="hidden" id="nuevaSemillaCat" value="">
+    <button class="btn-primary" id="btnAgregarSemilla" style="margin-top:12px" onclick="agregarSemilla()">+ A&#241;adir semilla</button>
   </div>
 </div>
 
@@ -1041,14 +1049,6 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     <datalist id="cultivosSuggestions"></datalist>
     <label>Semilla / Variedad</label>
     <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
-    <label>Categoría de semilla</label>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button type="button" class="cat-semilla-btn" data-val="" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:600;color:#888">Sin especificar</button>
-      <button type="button" class="cat-semilla-btn" data-val="R1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#2471a3">R1</button>
-      <button type="button" class="cat-semilla-btn" data-val="R2" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#8e44ad">R2</button>
-      <button type="button" class="cat-semilla-btn" data-val="C1" style="flex:1;padding:10px;border:1.5px solid var(--borde);border-radius:8px;background:white;cursor:pointer;font-size:13px;font-weight:700;color:#27ae60">C1</button>
-    </div>
-    <input type="hidden" id="cultivoCatSemilla" value="">
     <label>Tipo de siembra *</label>
     <div style="display:flex;gap:10px;margin-bottom:4px">
       <button type="button" class="tipo-siembra-btn" id="btnSiembraDirecta" data-val="directa">D - Directa</button>
@@ -2436,14 +2436,18 @@ function renderPAC() {
   }
   statsHtml += '</div>';
 
-  // ── STATS: categoría de semilla (R1/R2/C1) ───────────────────
+  // ── STATS: categoría de semilla (R1/R2/C1) desde catálogo semillas ─
   var semMap = {};
   for(var i=0;i<declaraciones.length;i++){
     var d = declaraciones[i];
     if(d.campana !== campanaActual) continue;
-    if(!d.catSemilla) continue;
-    if(!semMap[d.catSemilla]) semMap[d.catSemilla] = 0;
-    semMap[d.catSemilla] += parseFloat(d.superficie)||0;
+    if(!d.semilla) continue;
+    // Buscar categoría en el catálogo de semillas
+    var semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+    var catSem = (semObj && semObj.cat) ? semObj.cat : (d.catSemilla || null);
+    if(!catSem) continue;
+    if(!semMap[catSem]) semMap[catSem] = 0;
+    semMap[catSem] += parseFloat(d.superficie)||0;
   }
   var semKeys = Object.keys(semMap).sort();
   var semHtml = '';
@@ -2887,26 +2891,38 @@ function abrirSIGPAC(parcelaId) {
 
 var SEMILLA_ICONOS={'cereal':'','oleaginosa':'','legumbre':'','default':''};
 function renderSemillas() {
-  var cont=document.getElementById('listaSemillas');
-  if(!semillas.length){cont.innerHTML='<div style="text-align:center;padding:20px;color:#aaa">Sin semillas a\u00f1adidas</div>';return;}
-  var html='';
+  // Bind cat-semilla buttons en el formulario
+  var catColores = {'R1':'#2471a3','R2':'#8e44ad','C1':'#27ae60'};
+  document.querySelectorAll('#page-semillas .cat-semilla-btn').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('#page-semillas .cat-semilla-btn').forEach(function(b){ b.classList.remove('activo'); });
+      this.classList.add('activo');
+      document.getElementById('nuevaSemillaCat').value = this.getAttribute('data-val');
+    };
+  });
+
+  var cont = document.getElementById('listaSemillas');
+  if(!semillas.length){ cont.innerHTML='<div style="text-align:center;padding:20px;color:#aaa">Sin semillas a\u00f1adidas</div>'; return; }
+  var html = '';
   for(var i=0;i<semillas.length;i++){
-    var s=semillas[i];
-    html+='<div class="semilla-item">' +
+    var s = semillas[i];
+    var catBadge = s.cat ? '<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--azul-claro);color:'+(catColores[s.cat]||'#555')+'">'+s.cat+'</span>' : '';
+    html += '<div class="semilla-item">' +
       '<div class="semilla-icon">&#127807;</div>' +
-      '<div style="flex:1;min-width:0"><div class="semilla-name">'+s.nombre+'</div>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div class="semilla-name" style="display:flex;align-items:center;gap:6px">'+s.nombre+' '+catBadge+'</div>' +
       '<div class="semilla-sub">'+(s.tipo||'')+(s.variedad?' \u2014 '+s.variedad:'')+'</div></div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
       '<button class="sem-btn-edit" data-id="'+s.id+'" style="background:var(--azul-claro);color:var(--azul);border:none;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;font-weight:700;">&#9998;</button>' +
       '<button class="sem-btn-del" data-id="'+s.id+'" style="background:#fdf0ef;color:var(--rojo);border:none;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;font-weight:700;">\u2715</button>' +
       '</div></div>';
   }
-  cont.innerHTML=html;
+  cont.innerHTML = html;
   cont.querySelectorAll('.sem-btn-edit').forEach(function(btn){
-    btn.addEventListener('click',function(){ editarSemilla(this.getAttribute('data-id')); });
+    btn.addEventListener('click', function(){ editarSemilla(this.getAttribute('data-id')); });
   });
   cont.querySelectorAll('.sem-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){ eliminarSemilla(this.getAttribute('data-id')); });
+    btn.addEventListener('click', function(){ eliminarSemilla(this.getAttribute('data-id')); });
   });
 }
 
@@ -2914,29 +2930,29 @@ function agregarSemilla() {
   var nombre   = document.getElementById('nuevaSemillaNombre').value.trim();
   var tipo     = document.getElementById('nuevaSemillaTipo').value.trim();
   var variedad = document.getElementById('nuevaSemillaVariedad').value.trim();
+  var cat      = document.getElementById('nuevaSemillaCat') ? document.getElementById('nuevaSemillaCat').value : '';
   var btn      = document.getElementById('btnAgregarSemilla');
   var editId   = btn ? btn.getAttribute('data-editando') : null;
 
-  if(!nombre){toast('El nombre es obligatorio',true);return;}
+  if(!nombre){ toast('El nombre es obligatorio',true); return; }
 
   if(editId) {
-    // Modo edición
     var idx = semillas.findIndex(function(s){ return String(s.id)===String(editId); });
-    if(idx!==-1){ semillas[idx].nombre=nombre; semillas[idx].tipo=tipo; semillas[idx].variedad=variedad; }
+    if(idx!==-1){ semillas[idx].nombre=nombre; semillas[idx].tipo=tipo; semillas[idx].variedad=variedad; semillas[idx].cat=cat; }
     if(btn){ btn.textContent='+ A\u00f1adir semilla'; btn.removeAttribute('data-editando'); btn.onclick=agregarSemilla; }
-    // Quitar botón cancelar si existe
     var cancelBtn = document.getElementById('btnCancelarEditSemilla');
     if(cancelBtn) cancelBtn.remove();
     save(); renderSemillas(); toast('Semilla actualizada \u2714');
   } else {
-    // Modo añadir
-    for(var i=0;i<semillas.length;i++){if(semillas[i].nombre.toLowerCase()===nombre.toLowerCase()){toast('Semilla ya existe',true);return;}}
-    semillas.push({id:Date.now(),nombre:nombre,tipo:tipo,variedad:variedad});
+    for(var i=0;i<semillas.length;i++){ if(semillas[i].nombre.toLowerCase()===nombre.toLowerCase()){ toast('Semilla ya existe',true); return; } }
+    semillas.push({id:Date.now(), nombre:nombre, tipo:tipo, variedad:variedad, cat:cat});
     save(); renderSemillas(); toast('Semilla a\u00f1adida \u2714');
   }
   document.getElementById('nuevaSemillaNombre').value='';
   document.getElementById('nuevaSemillaTipo').value='';
   document.getElementById('nuevaSemillaVariedad').value='';
+  if(document.getElementById('nuevaSemillaCat')) document.getElementById('nuevaSemillaCat').value='';
+  document.querySelectorAll('#page-semillas .cat-semilla-btn').forEach(function(b){ b.classList.remove('activo'); });
 }
 
 function eliminarSemilla(id) {
@@ -3982,9 +3998,14 @@ function editarSemilla(id) {
   id = String(id);
   var s = semillas.find(function(x){ return String(x.id)===id; });
   if(!s) return;
-  document.getElementById('nuevaSemillaNombre').value = s.nombre||'';
-  document.getElementById('nuevaSemillaTipo').value   = s.tipo||'';
+  document.getElementById('nuevaSemillaNombre').value  = s.nombre||'';
+  document.getElementById('nuevaSemillaTipo').value    = s.tipo||'';
   document.getElementById('nuevaSemillaVariedad').value = s.variedad||'';
+  var catVal = s.cat||'';
+  if(document.getElementById('nuevaSemillaCat')) document.getElementById('nuevaSemillaCat').value = catVal;
+  document.querySelectorAll('#page-semillas .cat-semilla-btn').forEach(function(b){
+    b.classList.toggle('activo', b.getAttribute('data-val')===catVal);
+  });
   var btn = document.getElementById('btnAgregarSemilla');
   if(btn){ btn.textContent='\u2714 Guardar cambios'; btn.setAttribute('data-editando',id); btn.onclick=agregarSemilla; }
   // Botón cancelar
