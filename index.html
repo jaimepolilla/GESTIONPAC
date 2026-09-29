@@ -1032,7 +1032,7 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       <div style="margin-left:auto;font-size:12px;color:#888;text-align:right"><div id="disponibleUsado"></div><div id="disponibleTotal"></div></div>
     </div>
     <label>Categoria *</label>
-    <select id="cultivoCategoria">
+    <select id="cultivoCategoria" onchange="toggleCultivoField()">
       <option value="">-- Seleccionar categoria --</option>
       <option value="Cereal">Cereal</option>
       <option value="Leguminosa">Leguminosa</option>
@@ -1044,11 +1044,13 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
       <option value="Frutal">Frutal</option>
       <option value="Otro">Otro</option>
     </select>
-    <label>Cultivo *</label>
-    <input type="text" id="cultivoCultivo" placeholder="Trigo, Girasol..." list="cultivosSuggestions">
-    <datalist id="cultivosSuggestions"></datalist>
-    <label>Semilla / Variedad</label>
-    <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    <div id="cultivoCultivoDiv">
+      <label>Cultivo *</label>
+      <input type="text" id="cultivoCultivo" placeholder="Trigo, Girasol..." list="cultivosSuggestions">
+      <datalist id="cultivosSuggestions"></datalist>
+      <label>Semilla / Variedad</label>
+      <select id="cultivoSemilla"><option value="">Sin semilla especifica</option></select>
+    </div>
     <label>Tipo de siembra *</label>
     <div style="display:flex;gap:10px;margin-bottom:4px">
       <button type="button" class="tipo-siembra-btn" id="btnSiembraDirecta" data-val="directa">D - Directa</button>
@@ -2648,6 +2650,7 @@ function abrirModalCultivo(parcelaId, lineaId) {
     };
   });
 
+  toggleCultivoField();
   document.getElementById('modalCultivo').classList.add('open');
 }
 
@@ -2680,12 +2683,30 @@ function actualizarDisponible() {
   btn.disabled = excede; btn.textContent = excede?'Superficie excedida':'Guardar';
 }
 
+function toggleCultivoField() {
+  var cat = document.getElementById('cultivoCategoria').value;
+  var div = document.getElementById('cultivoCultivoDiv');
+  var lbl = div ? div.querySelector('label') : null;
+  if(cat === 'Barbecho') {
+    if(div) div.style.display = 'none';
+    document.getElementById('cultivoCultivo').value = 'Barbecho';
+  } else {
+    if(div) div.style.display = '';
+    if(document.getElementById('cultivoCultivo').value === 'Barbecho') {
+      document.getElementById('cultivoCultivo').value = '';
+    }
+  }
+}
+
 function guardarLineaCultivo() {
   var parcelaId = document.getElementById('cultivoParcelaId').value;
   var lineaId   = document.getElementById('cultivoLineaId').value;
   var cultivo   = document.getElementById('cultivoCultivo').value.trim();
+  var categoria = document.getElementById('cultivoCategoria') ? document.getElementById('cultivoCategoria').value : '';
   var superfStr = document.getElementById('cultivoSuperficie').value;
-  if(!cultivo) { toast('El cultivo es obligatorio',true); return; }
+  var esBarbecho = categoria === 'barbecho' || cultivo.toLowerCase() === 'barbecho';
+  if(!cultivo && !esBarbecho) { toast('El cultivo es obligatorio',true); return; }
+  if(!cultivo && esBarbecho) cultivo = 'Barbecho';
   if(!superfStr||isNaN(superfStr)||parseFloat(superfStr)<=0) { toast('Indica una superficie valida',true); return; }
   var superficie = parseFloat(superfStr);
   var p = null;
