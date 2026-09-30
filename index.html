@@ -872,8 +872,12 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--blanco);border-top:1
     </div>
   </div>
   <div class="ajuste-body" id="ajuste-parcelas">
-    <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina todas las parcelas y sus datos asociados (cultivos, laboreos). Esta acción no se puede deshacer.</div>
-    <button onclick="eliminarTodasParcelas()" style="width:100%;padding:12px;background:#fdf0ef;color:var(--rojo);border:1.5px solid #f5c6c2;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128465; Eliminar todas las parcelas</button>
+    <div style="font-size:13px;color:#666;margin-bottom:12px">Genera automáticamente la referencia SIGPAC de cada parcela a partir de los datos de polígono, parcela y recinto ya importados.</div>
+
+    <div style="border-top:1px solid var(--borde);padding-top:12px;margin-top:4px">
+      <div style="font-size:13px;color:#666;margin-bottom:12px">Elimina todas las parcelas y sus datos asociados (cultivos, laboreos). Esta acción no se puede deshacer.</div>
+      <button onclick="eliminarTodasParcelas()" style="width:100%;padding:12px;background:#fdf0ef;color:var(--rojo);border:1.5px solid #f5c6c2;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;">&#128465; Eliminar todas las parcelas</button>
+    </div>
   </div>
 
   <!-- CAMPAÑAS -->
