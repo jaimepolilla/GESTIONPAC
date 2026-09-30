@@ -2979,7 +2979,7 @@ function normHeader(h){
   return String(h||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
 }
 
-var SIGPAC_MAP={'referencia sigpac':'refSIGPAC','referencia':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
+var SIGPAC_MAP={'rereferencia sigpac':'refSIGPAC','referencia sigpac':'refSIGPAC','referencia sigpac ':'refSIGPAC','ref. sigpac':'refSIGPAC','ref sigpac':'refSIGPAC','refsigpac':'refSIGPAC','referencia':'refSIGPAC','poligono':'poligono','parcela':'parcela','recinto':'recinto','superficie total':'superficie','superficie (ha)':'superficie','superficie':'superficie','regadio / secano':'regadio','regadio/secano':'regadio','regadio':'regadio','nombre parcela':'nombre','nombre':'nombre','poblacion':'municipio','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas','ref catastral':'refCatastral','referencia catastral':'refCatastral'};
 var CUSTOM_MAP={'nombre':'nombre','referencia catastral':'refCatastral','ref catastral':'refCatastral','superficie':'superficie','superficie (ha)':'superficie','ha':'superficie','municipio':'municipio','provincia':'provincia','cultivo':'cultivo','semilla':'semilla','variedad':'semilla','fecha siembra':'fechaSiembra','fecha de siembra':'fechaSiembra','notas':'notas','observaciones':'notas'};
 
 function parseSurface(v){if(v===undefined||v===null||v==='')return 0;return parseFloat(String(v).replace(',','.'))||0;}
@@ -3100,7 +3100,13 @@ function exportarExcelCampana(campana) {
     var p=parcelas[i];
     var lineas=[];
     for(var j=0;j<declaraciones.length;j++){if(declaraciones[j].parcelaId===p.id&&declaraciones[j].campana===campana)lineas.push(declaraciones[j]);}
-    var base={'Ref SIGPAC':p.refSIGPAC||'','Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campana};
+    // Leer referencia SIGPAC con tolerancia a variaciones de nombre de campo
+    var refSIGPAC = p.refSIGPAC || p.RefSIGPAC || p.ref_sigpac || p.referenciaSIGPAC || '';
+    // Si no existe, construirla desde campos individuales (poligono-parcela-recinto)
+    if(!refSIGPAC && p.poligono && p.parcela) {
+      refSIGPAC = String(p.poligono) + '-' + String(p.parcela) + (p.recinto ? '-' + String(p.recinto) : '');
+    }
+    var base={'Ref SIGPAC':refSIGPAC,'Poligono':p.poligono||'','Parcela':p.parcela||'','Recinto':p.recinto||'','Sup Total':p.superficie||'','Reg Sec':p.regadio||'','Municipio':p.municipio||'','Provincia':p.provincia||'','Campana':campana};
     if(lineas.length){
       for(var j=0;j<lineas.length;j++){
         var d=lineas[j];var row={};for(var k in base)row[k]=base[k];
