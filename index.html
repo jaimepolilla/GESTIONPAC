@@ -2457,7 +2457,7 @@ function renderPAC() {
     if(d.campana !== campanaActual) continue;
     if(!d.semilla) continue;
     // Buscar categoría en el catálogo de semillas
-    var semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+    var semObj = _semillaDeDeclaracion(d);
     var catSem = (semObj && semObj.cat) ? semObj.cat : (d.catSemilla || null);
     if(!catSem) continue;
     if(!semMap[catSem]) semMap[catSem] = 0;
@@ -2617,7 +2617,7 @@ function abrirModalCultivo(parcelaId, lineaId) {
   var sel = document.getElementById('cultivoSemilla');
   sel.innerHTML = '<option value="">Sin semilla especifica</option>';
   for(var i=0;i<semillas.length;i++) {
-    sel.innerHTML += '<option value="'+semillas[i].nombre+'">'+semillas[i].nombre+(semillas[i].variedad?' - '+semillas[i].variedad:'')+'</option>';
+    sel.innerHTML += '<option value="'+semillas[i].id+'">'+_textoSemilla(semillas[i])+(semillas[i].cat?' ('+semillas[i].cat+')':'')+'</option>';
   }
   var dl = document.getElementById('cultivosSuggestions');
   var cultUniq = {};
@@ -2629,7 +2629,7 @@ function abrirModalCultivo(parcelaId, lineaId) {
     for(var i=0;i<declaraciones.length;i++) { if(declaraciones[i].id===lineaId){d=declaraciones[i];break;} }
     if(d) {
       document.getElementById('cultivoCultivo').value=d.cultivo||'';
-      document.getElementById('cultivoSemilla').value=d.semilla||'';
+      var _so = _semillaDeDeclaracion(d); document.getElementById('cultivoSemilla').value = _so ? String(_so.id) : '';
       document.getElementById('cultivoSuperficie').value=d.superficie||'';
       document.getElementById('cultivoFechaSiembra').value=d.fechaSiembra||'';
       document.getElementById('cultivoNotas').value=d.notas||'';
@@ -2695,10 +2695,31 @@ function actualizarDisponible() {
   btn.disabled = excede; btn.textContent = excede?'Superficie excedida':'Guardar';
 }
 
+function _textoSemilla(s) {
+  if(!s) return '';
+  return s.nombre + (s.variedad ? ' - ' + s.variedad : '');
+}
+
+// Devuelve la semilla del catálogo asociada a una declaración
+function _semillaDeDeclaracion(d) {
+  if(!d) return null;
+  if(d.semillaId) {
+    var porId = semillas.find(function(s){ return String(s.id) === String(d.semillaId); });
+    if(porId) return porId;
+  }
+  if(!d.semilla) return null;
+  // Compatibilidad: texto "Nombre - Variedad"
+  var porTexto = semillas.find(function(s){ return _textoSemilla(s) === d.semilla; });
+  if(porTexto) return porTexto;
+  // Datos antiguos con solo el nombre: válido solo si no hay ambigüedad
+  var porNombre = semillas.filter(function(s){ return s.nombre === d.semilla; });
+  return porNombre.length === 1 ? porNombre[0] : null;
+}
+
 function verParcelasPorCatSemilla(cat) {
   var lista = declaraciones.filter(function(d) {
     if(d.campana !== campanaActual || !d.semilla) return false;
-    var semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+    var semObj = _semillaDeDeclaracion(d);
     return semObj && semObj.cat === cat;
   });
   document.getElementById('modalParcelasCultivoTitle').textContent = 'Semilla ' + cat + ' \u2014 Parcelas';
@@ -2738,7 +2759,7 @@ function _renderModalParcelasCultivo(lista) {
     var p = parcelas.find(function(x){ return x.id === d.parcelaId; });
     var pNombre = p ? p.nombre : 'Parcela desconocida';
     var pMun = p ? (p.municipio||'') : '';
-    var semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+    var semObj = _semillaDeDeclaracion(d);
     var catSem = semObj ? (semObj.cat||'') : '';
     var catBadge = catSem ? '<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--azul-claro);color:'+(_semCatColores[catSem]||'#555')+'">'+catSem+'</span>' : '';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--borde)">' +
@@ -2791,7 +2812,8 @@ function guardarLineaCultivo() {
     id: lineaId || (Date.now().toString()+Math.random().toString(36).slice(2)),
     parcelaId: parcelaId, campana: campanaActual, cultivo: cultivo,
     categoria:   document.getElementById('cultivoCategoria') ? document.getElementById('cultivoCategoria').value : '',
-    semilla:     document.getElementById('cultivoSemilla').value,
+    semillaId:   document.getElementById('cultivoSemilla').value,
+    semilla:     _textoSemilla(semillas.find(function(s){ return String(s.id)===document.getElementById('cultivoSemilla').value; })),
     tipoSiembra: document.getElementById('cultivoTipoSiembra') ? document.getElementById('cultivoTipoSiembra').value : '',
     superficie: superficie,
     fechaSiembra: document.getElementById('cultivoFechaSiembra').value,
@@ -3184,7 +3206,7 @@ function exportarExcelCampana(campana) {
         row['Tipo Siembra']=d.tipoSiembra==='directa'?'D':d.tipoSiembra==='tradicional'?'T':'';
         row['Semilla']=d.semilla||'';
         // Categoría semilla (R1/R2/C1) desde catálogo
-        var _semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+        var _semObj = _semillaDeDeclaracion(d);
         row['Cat. Semilla'] = _semObj ? (_semObj.cat||'') : '';
         row['Sup Declarada (ha)']=d.superficie||'';
         row['Fecha Siembra']=d.fechaSiembra||'';
