@@ -3183,6 +3183,9 @@ function exportarExcelCampana(campana) {
         row['Cultivo']=d.cultivo||'';
         row['Tipo Siembra']=d.tipoSiembra==='directa'?'D':d.tipoSiembra==='tradicional'?'T':'';
         row['Semilla']=d.semilla||'';
+        // Categoría semilla (R1/R2/C1) desde catálogo
+        var _semObj = semillas.find(function(s){ return s.nombre === d.semilla; });
+        row['Cat. Semilla'] = _semObj ? (_semObj.cat||'') : '';
         row['Sup Declarada (ha)']=d.superficie||'';
         row['Fecha Siembra']=d.fechaSiembra||'';
         row['Notas']=d.notas||'';
@@ -3190,7 +3193,7 @@ function exportarExcelCampana(campana) {
       }
     } else {
       var row={};for(var k in base)row[k]=base[k];
-      row['Categoria']='';row['Cultivo']='';row['Tipo Siembra']='';row['Semilla']='';row['Sup Declarada (ha)']='';row['Fecha Siembra']='';row['Notas']='';
+      row['Categoria']='';row['Cultivo']='';row['Tipo Siembra']='';row['Semilla']='';row['Cat. Semilla']='';row['Sup Declarada (ha)']='';row['Fecha Siembra']='';row['Notas']='';
       datos.push(row);
     }
   }
