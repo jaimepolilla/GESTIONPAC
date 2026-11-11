@@ -3207,7 +3207,8 @@ function exportarExcelCampana(campana) {
         row['Semilla']=d.semilla||'';
         // Categoría semilla (R1/R2/C1) desde catálogo
         var _semObj = _semillaDeDeclaracion(d);
-        row['Cat. Semilla'] = _semObj ? (_semObj.cat||'') : '';
+        var _catNotas = ((d.notas||'').toUpperCase().match(/\b(R1|R2|C1)\b/)||[])[1] || '';
+        row['Cat. Semilla'] = (_semObj && _semObj.cat) ? _semObj.cat : _catNotas;
         row['Sup Declarada (ha)']=d.superficie||'';
         row['Fecha Siembra']=d.fechaSiembra||'';
         row['Notas']=d.notas||'';
